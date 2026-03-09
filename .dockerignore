@@ -1,0 +1,17 @@
+node_modules
+jspm_packages
+npm-debug.log
+.npm
+yarn-debug.log
+.yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.dockerignore
+Dockerfile
+.git
+.gitignore
+logs
+.vscode-test
+.xcode.env.local
