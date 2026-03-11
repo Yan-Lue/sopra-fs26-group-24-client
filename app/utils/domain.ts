@@ -8,6 +8,6 @@ import { isProduction } from "@/utils/environment";
 export function getApiDomain(): string {
   const prodUrl = process.env.NEXT_PUBLIC_PROD_API_URL ||
     "http://localhost:8080"; // TODO: update with your production URL as needed.
-  const devUrl = "http://localhost:8080";
+  const devUrl = "https://sopra-fs26-group-24-server.oa.r.appspot.com/";
   return isProduction() ? prodUrl : devUrl;
 }
