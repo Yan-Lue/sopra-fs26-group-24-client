@@ -1,13 +1,13 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #1a0a0f;
+  --card: #2d1319;
+  --primary-gold: #d4af37;
+  --secondary: #4a1f2b;
+  --accent: #c9a869;
+  --text: #f5e6d3;
 }
 
 html,
@@ -17,11 +17,22 @@ body {
 }
 
 body {
-  color: var(--foreground);
+  color: var(--text);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Cormorant', serif;
+  font-weight: 600;
+  color: var(--text);
 }
 
 * {
@@ -35,28 +46,49 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-}
-
-.login-container {
+.login-container,
+.card-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: rgb(41, 44, 59);
+  background-color: var(--background);
 }
 
 .login-button {
   width: 100%;
 }
 
-.card-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: rgb(41, 44, 59);
+.login-card,
+.register-card {
+  background: var(--card) !important;
+  border-color: var(--secondary) !important;
+  color: var(--text) !important;
+}
+
+.login-card .ant-card-head,
+.register-card .ant-card-head {
+  border-bottom-color: var(--secondary) !important;
+}
+
+.login-card .ant-card-head-title,
+.register-card .ant-card-head-title {
+  font-family: "Cormorant", serif;
+  font-weight: 700;
+  color: var(--text) !important;
+}
+
+.login-card .ant-form-item-label > label,
+.register-card .ant-form-item-label > label {
+  color: var(--text) !important;
+}
+
+.ant-input-password .ant-input-password-icon {
+  color: var(--accent) !important;
+}
+
+.redirect-link.ant-btn-link {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+  color: var(--accent) !important;
 }

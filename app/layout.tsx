@@ -1,18 +1,7 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { App as AntdApp, ConfigProvider, theme } from "antd";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
 import "@/styles/globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { App as AntdApp, ConfigProvider, theme } from "antd";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "SoPra Group 24",
@@ -26,37 +15,40 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
         <ConfigProvider
           theme={{
             algorithm: theme.defaultAlgorithm,
             token: {
-              // general theme options are set in token, meaning all primary elements (button, menu, ...) will have this color
-              colorPrimary: "#22426b", // selected input field boarder will have this color as well
+              colorPrimary: "#d4af37",
+              colorText: "#f5e6d3",
+              colorBgBase: "#1a0a0f",
+              colorBgContainer: "#2d1319",
+              colorBorder: "#4a1f2b",
+              colorLink: "#c9a869",
               borderRadius: 8,
-              colorText: "#fff",
               fontSize: 16,
-
-              // Alias Token
-              colorBgContainer: "#16181D",
+              fontFamily: "Outfit, sans-serif",
             },
-            // if a component type needs special styling, setting here will override default options set in token
             components: {
               Button: {
-                colorPrimary: "#75bd9d", // this will color all buttons in #75bd9d, overriding the default primaryColor #22426b set in token line 35
-                algorithm: true, // enable algorithm (redundant with line 33 but here for demo purposes)
+                colorPrimary: "#d4af37",
+                colorTextLightSolid: "#1a0a0f",
                 controlHeight: 38,
+                primaryShadow: "none",
               },
               Input: {
-                colorBorder: "gray", // color boarder selected is not overridden but instead is set by primary color in line 35
-                colorTextPlaceholder: "#888888",
-                algorithm: false, // disable algorithm (line 32)
+                colorBorder: "#4a1f2b",
+                colorTextPlaceholder: "#c9a869",
               },
               Form: {
-                labelColor: "#fff",
-                algorithm: theme.defaultAlgorithm, // specify a specifc algorithm instead of true/false
+                labelColor: "#f5e6d3",
               },
-              Card: {},
+              Card: {
+                colorBgContainer: "#2d1319",
+                colorBorderSecondary: "#4a1f2b",
+                headerFontSize: 24,
+              },
             },
           }}
         >
