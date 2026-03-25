@@ -60,3 +60,31 @@ a {
   min-height: 100vh;
   background-color: rgb(41, 44, 59);
 }
+
+.play-container {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 32px;
+  min-height: 100vh;
+  padding: 64px 32px;
+  background-color: rgb(41, 44, 59);
+}
+
+.play-card {
+  flex: 1;
+  max-width: 480px;
+  min-width: 280px;
+}
+
+@media (max-width: 700px) {
+  .play-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .play-card {
+    max-width: 100%;
+    width: 100%;
+  }
+}
