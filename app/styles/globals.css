@@ -92,3 +92,37 @@ a {
   text-underline-offset: 3px;
   color: var(--accent) !important;
 }
+
+.play-container {
+  display: flex;
+  gap: 42px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: wrap;
+  min-height: 85vh;
+  padding: 36px;
+  background-color: var(--background);
+}
+
+
+
+.play-card {
+  flex: 1 1 320px;
+  max-width: 480px;
+}
+.play-card .ant-form-item {
+  margin: 16px;
+  max-width: 30vw;
+
+}
+.play-button {
+  background-color: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
+  width: 100%;
+}
+.play-description {
+  white-space: pre-wrap;
+}
+
+
