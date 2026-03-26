@@ -4,4 +4,6 @@ export interface User {
   username: string | null;
   token: string | null;
   status: string | null;
+  bio: string | null;
+  email: string | null;
 }

@@ -60,26 +60,38 @@ a {
 }
 
 .login-card,
-.register-card {
+.register-card,
+.play-card {
   background: var(--card) !important;
   border-color: var(--secondary) !important;
   color: var(--text) !important;
 }
 
 .login-card .ant-card-head,
-.register-card .ant-card-head {
+.register-card .ant-card-head,
+.play-card .ant-card-head {
   border-bottom-color: var(--secondary) !important;
+  text-align: center;
 }
 
 .login-card .ant-card-head-title,
-.register-card .ant-card-head-title {
+.register-card .ant-card-head-title,
+.play-card .ant-card-head-title {
   font-family: "Cormorant", serif;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text) !important;
 }
 
+.login-card .ant-card-body,
+.register-card .ant-card-body,
+.play-card .ant-card-body {
+  padding: 24px 32px;
+}
+
 .login-card .ant-form-item-label > label,
-.register-card .ant-form-item-label > label {
+.register-card .ant-form-item-label > label,
+.play-card .ant-form-item-label > label {
   color: var(--text) !important;
 }
 
@@ -93,6 +105,12 @@ a {
   color: var(--accent) !important;
 }
 
+.play-card {
+  flex: 0 1 420px;
+  width: 100%;
+  max-width: 420px;
+}
+
 .play-container {
   display: flex;
   gap: 42px;
@@ -104,17 +122,6 @@ a {
   background-color: var(--background);
 }
 
-
-
-.play-card {
-  flex: 1 1 320px;
-  max-width: 480px;
-}
-.play-card .ant-form-item {
-  margin: 16px;
-  max-width: 30vw;
-
-}
 .play-button {
   background-color: var(--primary-gold) !important;
   border-color: var(--primary-gold) !important;
@@ -125,4 +132,96 @@ a {
   white-space: pre-wrap;
 }
 
+.home-container,
+.history-container {
+  min-height: 100vh;
+  padding: 64px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--background);
+}
 
+.home-intro, 
+.history-intro {
+  text-align: center;
+  max-width: 760px;
+  margin-bottom: 36px;
+}
+
+.home-actions,
+.history-actions {
+  width: 100%;
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.home-action-card.ant-card,
+.history-action-card.ant-card {
+  cursor: pointer;
+  background: var(--card) !important;
+  border: 1px solid var(--secondary) !important;
+  color: var(--text) !important;
+}
+
+.home-action-card .ant-card-body,
+.history-action-card .ant-card-body {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.home-action-card .ant-typography,
+.history-action-card .ant-typography {
+  color: var(--text) !important;
+}
+
+.page-with-nav {
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 64px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border-bottom: 1px solid var(--secondary);
+}
+
+.top-nav-left,
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-nav-link.ant-btn {
+  color: var(--text);
+}
+
+.top-nav-link.ant-btn.is-active {
+  background: var(--primary-gold) !important;
+  color: var(--background) !important;
+  border-color: var(--primary-gold) !important;
+}
+
+.top-nav-logout.ant-btn {
+  border-color: var(--secondary);
+  color: var(--text);
+}
+
+.top-nav-profile.ant-btn {
+  color: var(--accent);
+}

@@ -57,7 +57,7 @@ const Login: React.FC = () => {
         setUserId(response.id);
       }
 
-      router.push("/");
+      router.push("/home");
     } catch (error) {
       const err = error as {status?: number; message?: string};
       if (err.status === 401) {
@@ -84,7 +84,7 @@ const Login: React.FC = () => {
         setUserId(response.id);
       }
 
-      router.push("/");
+      router.push("/home");
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
@@ -100,7 +100,6 @@ const Login: React.FC = () => {
     <div className="login-container">
       <Card className="login-card" 
         title="Login" 
-        styles={{ title: { fontSize: 24 }, header: {textAlign: "center"}, body: { padding: "24px 32px" }}}
         >
         {infoMessage && (
           <Alert

@@ -49,7 +49,7 @@ const Register: React.FC = () => {
 
 
       // Navigate to the user overview
-      router.push("/");
+      router.push("/home");
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
@@ -65,7 +65,6 @@ const Register: React.FC = () => {
     <div className="login-container">
       <Card className="register-card"
             title="Register"
-            styles={{ title: { fontSize: 24 }, header: {textAlign: "center"}, body: { padding: "24px 32px" }}}
       >
         <Form
           form={form}
