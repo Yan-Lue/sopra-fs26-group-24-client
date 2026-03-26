@@ -1,6 +1,7 @@
 "use client";
 
-import { Card, Input, Button, Form } from "antd";
+import Navbar from "@/components/Navbar";
+import { Button, Card, Form, Input, Select } from "antd";
 
 const createSessionDescription = `Create a new game session as a host and invite your friends to join.
 
@@ -12,51 +13,99 @@ const joinSessionDescription = `Join an existing game session using the session 
 
 To join a session, enter the session code below and click on the "Join Session" button.`;
 
+interface CreateSessionFormValues {
+  sessionName: string;
+  numberOfPlayers: number;
+}
+
+interface JoinSessionFormValues {
+  sessionCode: string;
+}
+
+// Generate player options for the Select component
+const playerOptions = Array.from({ length: 16 }, (_, index) => ({
+  value: index + 1,
+  label: `${index + 1}`,
+}));
+
 //implement actual functionality for creating and joining sessions
 //usestate -> setsession name
 const Play: React.FC = () => {
+
+  const handleCreateSession = (values: CreateSessionFormValues) => {
+    console.log("Create session values:", values);
+  };
+
+  const handleJoinSession = (values: JoinSessionFormValues) => {
+    console.log("Join session values:", values);
+  };
+
   return (
-    <div className="play-container">
-      <Card className="play-card" title="Create New Session">
-        <p className="play-description">{createSessionDescription}</p>
+    <div className="page-with-nav">
+        <Navbar />
 
-        <Form.Item
-          name="sessionName"
-          label="Session Name"
-          rules={[{ required: true, message: "Please input a session name!" }]}
-        >
-        <Input placeholder="Enter a Session name" 
-          /> 
-        </Form.Item>
-        <Form.Item
-          name= "numberOfPlayers"
-          label="Number of Players"
-          rules={[{ required: false, message: "Please input the number of players!" }]}
-        >
-          <Input type="number" value="16" min="1" max="24" placeholder="Enter the number of players" />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" className="play-button">
-            Create Session
-          </Button>
-        </Form.Item>
-      </Card>
+      <div className="play-container">
+        <Card className="play-card" title="Create New Session">
+          <p className="play-description">{createSessionDescription}</p>
 
-      <Card className="play-card" title="Join Session">
-        <p className="play-description">{joinSessionDescription}</p>
-        <Form.Item
-          name="sessionCode"
-          label="Session Code"
-          rules={[{ required: true, message: "Please input the session code!" }]}
-        >
-          <Input placeholder="Enter the session code" />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" className="play-button">
-            Join Session
-          </Button>
-        </Form.Item>
-      </Card>
+          <Form<CreateSessionFormValues>
+            layout="vertical"
+            onFinish={handleCreateSession}
+          >
+          <Form.Item
+          style={{ marginTop: 24 }}
+            name="sessionName"
+            label="Session Name"
+            rules={[{ required: true, message: "Please input a session name!" }]}
+          >
+            <Input placeholder="Enter a Session name" /> 
+          </Form.Item>
+
+          <Form.Item
+            name= "numberOfPlayers"
+            label="Number of Players"
+            rules={[{ required: true, message: "Please input the number of players!" }]}
+          >
+
+            <Select
+              placeholder={
+                <span style={{ color: "var(--accent)", opacity: 1 }}>
+                  Select the number of players...
+                </span>
+              }
+              options={playerOptions}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className="play-button">
+              Create Session
+            </Button>
+          </Form.Item>
+          </Form>
+        </Card>
+
+        <Card className="play-card" title="Join Session">
+          <p className="play-description">{joinSessionDescription}</p>
+
+          <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
+          <Form.Item
+            style={{ marginTop: 24 }}
+            name="sessionCode"
+            label="Session Code"
+            rules={[{ required: true, message: "Please input the session code!" }]}
+          >
+            <Input placeholder="XXX-XXX" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className="play-button">
+              Join Session
+            </Button>
+          </Form.Item>
+          </Form>
+        </Card>
+      </div>
     </div>
   );
 };
