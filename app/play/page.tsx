@@ -1,7 +1,10 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
-import { Button, Card, Form, Input, Select } from "antd";
+import { Button, Card, Form, Input, message, Select } from "antd";
+import { useRouter } from "next/navigation";
+//possible to use useState to mark when joining right now 
+
 
 const createSessionDescription = `Create a new game session as a host and invite your friends to join.
 
@@ -22,6 +25,10 @@ interface JoinSessionFormValues {
   sessionCode: string;
 }
 
+interface JoinSessionFormValues {
+  sessionCode: string;
+}
+
 // Generate player options for the Select component
 const playerOptions = Array.from({ length: 16 }, (_, index) => ({
   value: index + 1,
@@ -31,14 +38,41 @@ const playerOptions = Array.from({ length: 16 }, (_, index) => ({
 //implement actual functionality for creating and joining sessions
 //usestate -> setsession name
 const Play: React.FC = () => {
+  const router = useRouter();
 
   const handleCreateSession = (values: CreateSessionFormValues) => {
     console.log("Create session values:", values);
   };
 
-  const handleJoinSession = (values: JoinSessionFormValues) => {
+  
+  const handleJoinSession = async (values: JoinSessionFormValues) => {
+    const sessioncode = values.sessionCode.trim();
     console.log("Join session values:", values);
-  };
+
+    //check if session code is empty
+    if (!sessioncode) {
+      message.error("Please enter a session code.");
+      return;
+    }
+
+  
+  try {
+    const result = await fetch(`/session/${sessioncode}`, {
+      
+      method: "GET",
+    });
+
+    if (!result.ok) {
+      message.error("Session not found. Please check the session code and try again.");
+      return;
+    }
+
+    message.success("Session found! Joining session...");
+    router.push(`/session/${sessioncode}`);
+  } catch (error) {
+    message.error("Server can not be reached. Please try again later.");
+  }
+};
 
   return (
     <div className="page-with-nav">
