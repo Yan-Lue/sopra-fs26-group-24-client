@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Global Styles */
 :root {
   --background: #1a0a0f;
   --card: #2d1319;
@@ -46,8 +47,10 @@ a {
   text-decoration: none;
 }
 
+/* Login, Register, Home and Profile Page Styles */
 .login-container,
-.card-container {
+.card-container, 
+.profile-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -61,7 +64,10 @@ a {
 
 .login-card,
 .register-card,
-.play-card {
+.play-card, 
+.profile-card, 
+.home-action-card,
+.history-action-card.ant-card {
   background: var(--card) !important;
   border-color: var(--secondary) !important;
   color: var(--text) !important;
@@ -69,14 +75,16 @@ a {
 
 .login-card .ant-card-head,
 .register-card .ant-card-head,
-.play-card .ant-card-head {
+.play-card .ant-card-head,
+.profile-card .ant-card-head {
   border-bottom-color: var(--secondary) !important;
   text-align: center;
 }
 
 .login-card .ant-card-head-title,
 .register-card .ant-card-head-title,
-.play-card .ant-card-head-title {
+.play-card .ant-card-head-title,
+.profile-card .ant-card-head-title {
   font-family: "Cormorant", serif;
   font-size: 24px;
   font-weight: 700;
@@ -85,13 +93,15 @@ a {
 
 .login-card .ant-card-body,
 .register-card .ant-card-body,
-.play-card .ant-card-body {
+.play-card .ant-card-body,
+.profile-card .ant-card-body {
   padding: 24px 32px;
 }
 
 .login-card .ant-form-item-label > label,
 .register-card .ant-form-item-label > label,
-.play-card .ant-form-item-label > label {
+.play-card .ant-form-item-label > label,
+.profile-card .ant-form-item-label > label {
   color: var(--text) !important;
 }
 
@@ -105,6 +115,7 @@ a {
   color: var(--accent) !important;
 }
 
+/* Play Page Styles */
 .play-card {
   flex: 0 1 420px;
   width: 100%;
@@ -132,6 +143,7 @@ a {
   white-space: pre-wrap;
 }
 
+/* Home and History Page Styles */
 .home-container,
 .history-container {
   min-height: 100vh;
@@ -152,9 +164,11 @@ a {
 .home-actions,
 .history-actions {
   width: 100%;
-  max-width: 760px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  max-width: 900px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
   gap: 20px;
 }
 
@@ -164,6 +178,8 @@ a {
   background: var(--card) !important;
   border: 1px solid var(--secondary) !important;
   color: var(--text) !important;
+  flex: 1 1 320px;
+  max-width: 420px;
 }
 
 .home-action-card .ant-card-body,
@@ -181,6 +197,7 @@ a {
   color: var(--text) !important;
 }
 
+/* Navbar Styles */
 .page-with-nav {
   min-height: 100vh;
   background: var(--background);
@@ -224,4 +241,65 @@ a {
 
 .top-nav-profile.ant-btn {
   color: var(--accent);
+}
+
+/* Profile Page Styles */
+.profile-descriptions .ant-descriptions-item-label {
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  background: var(--secondary) !important;
+  border-color: var(--secondary) !important;
+}
+
+.profile-descriptions .ant-descriptions-item-content {
+  color: var(--text) !important;
+  background: rgba(74, 31, 43, 0.25) !important;
+  border-color: var(--secondary) !important;
+}
+
+.profile-bio {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  text-align: left;
+  max-width: 100%;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.profile-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.profile-avatar.ant-avatar {
+  background: var(--background) !important;
+  color: var(--primary-gold) !important;
+  border: 2px solid var(--accent);
+  font-family: "Cormorant", serif;
+  font-size: 46px !important;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Logout Button Styles */
+.logout-button.ant-btn {
+  background: var(--primary-gold) !important;
+  border: 1px solid var(--primary-gold) !important;
+  color: var(--background) !important;
+  font-weight: 600;
+  min-width: 140px;
+  box-shadow: none !important;
+}
+
+.logout-button.ant-btn:hover,
+.logout-button.ant-btn:focus {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--background) !important;
 }
