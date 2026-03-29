@@ -84,7 +84,7 @@ const Navbar: React.FC = () => {
             <Button
               type="primary"
               className="top-nav-login"
-              onClick={() => router.push("/login")}
+              onClick={handleLogout} // for guests this will just clear the guest token and redirect to login, effectively "logging out" the guest session
             >
               Login
             </Button>

@@ -12,22 +12,21 @@ const homeDescription =
 
 const Home: React.FC = () => {
   const router = useRouter();
-  // const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
-    // commented out for easier testing, can be enabled later
-    // const token = localStorage.getItem("token");
-    // if (token && !token.startsWith("Guest-")) {
-    //   setIsAuthorized(true);
-    // }
-
-    const redirectMessage = sessionStorage.getItem("redirectMessage");
-    if (redirectMessage) {
-      setInfoMessage(redirectMessage);
-      sessionStorage.removeItem("redirectMessage");
-    }
+    const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+  
+      if (!token || !userId || token === "" || userId === "") {
+        sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+        router.replace("/login");
+        return;
+      }
+  
+      setIsAuthorized(true);
   }, []);
 
   // same as with navbar
@@ -51,10 +50,10 @@ const Home: React.FC = () => {
     router.push("/history");
     };
 
-//     // prevents rendering/flickering when not logged in 
-//   if (!isAuthorized) {
-//     return null;
-//   }
+    // prevents rendering/flickering when not logged in 
+  if (!isAuthorized) {
+    return null;
+  }
 
   return (
     <>

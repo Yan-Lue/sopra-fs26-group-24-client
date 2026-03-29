@@ -3,18 +3,17 @@
 import Navbar from "@/components/Navbar";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
-//possible to use useState to mark when joining right now 
+import { useEffect, useState } from "react";
 
 
-const createSessionDescription = `Create a new game session as a host and invite your friends to join.
+const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
 
-As a host, you can manage the game settings and start the game when everyone is ready.
-To create a session, enter your credentials and click on the "Create Session" button.`;
+Take control as the host and guide everyone through an exciting collection of movie choices. Watch as everyone swipes through films together, and discover which movies your group loves the most. Create unforgettable movie nights by finding the perfect film that everyone wants to watch!`;
 
 
-const joinSessionDescription = `Join an existing game session using the session code provided by the host.
+const joinSessionDescription = `Got a session code from a friend? Jump right in and join the excitement! 
 
-To join a session, enter the session code below and click on the "Join Session" button.`;
+Enter the unique session code below and start swiping through movies with your group. Share your movie preferences, see what everyone else thinks, and help your friends discover the perfect film for your next movie night together. The more people join, the better the recommendations!`;
 
 interface CreateSessionFormValues {
   sessionName: string;
@@ -38,7 +37,23 @@ const playerOptions = Array.from({ length: 16 }, (_, index) => ({
 //implement actual functionality for creating and joining sessions
 //usestate -> setsession name
 const Play: React.FC = () => {
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
+
+
+  useEffect(() => {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+  
+      if (!token || !userId || token === "" || userId === "") {
+        sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+        router.replace("/login");
+        return;
+      }
+  
+      setIsAuthorized(true);
+
+  }, [router]);
 
   const handleCreateSession = (values: CreateSessionFormValues) => {
     console.log("Create session values:", values);
@@ -73,6 +88,10 @@ const Play: React.FC = () => {
     message.error("Server can not be reached. Please try again later.");
   }
 };
+
+  if (!isAuthorized) {
+    return null;
+  }
 
   return (
     <div className="page-with-nav">
@@ -129,7 +148,7 @@ const Play: React.FC = () => {
             label="Session Code"
             rules={[{ required: true, message: "Please input the session code!" }]}
           >
-            <Input placeholder="XXX-XXX" />
+            <Input placeholder="XXX-XXX" style={{ textAlign: "center" }}/>
           </Form.Item>
 
           <Form.Item>
