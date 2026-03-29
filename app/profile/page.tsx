@@ -4,9 +4,9 @@ import { useApi } from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { User } from "@/types/user";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Descriptions } from "antd";
+import { Avatar, Button, Card, Descriptions } from "antd";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const Profile: React.FC = () => {
   const router = useRouter();
@@ -18,77 +18,76 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // handles side effects, interact with systems outside like API, browser storage etc., runs after render
-//   useEffect(() => {
-//     const token = localStorage.getItem("token");
-//     const userId = localStorage.getItem("userId");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
 
-//     // uncomment when implementation is ready
-//     // if (!token || !userId || token === "" || userId === "") {
-//     //   // sessionStorage as better practice for temporary messages, could also use localStorage
-//     //   sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
-//     //   router.replace("/login");
-//     //   return;
-//     // }
+    if (!token || !userId || token === "" || userId === "") {
+      // sessionStorage as better practice for temporary messages, could also use localStorage
+      sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+      router.replace("/login");
+      return;
+    }
 
-//     setIsAuthorized(true);
+    setIsAuthorized(true);
 
-//     const fetchProfile = async () => {
-//       try {
-//         const userData = await apiService.get<User>(`/users/${userId}`); // implement GET /users/{id} in the backend
-//         setUser(userData);
-//       } catch (error) {
-//         console.error("Error fetching profile:", error);
-//         router.replace("/login");
-//       }
-//     };
+    const fetchProfile = async () => {
+      try {
+        const userData = await apiService.get<User>(`/users/${userId}`);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        router.replace("/login");
+      }
+    };
 
-//     fetchProfile();
-//   }, [apiService, router]);
+    fetchProfile();
+  }, [apiService, router]);
 
   const handleLogout = async () => {
     try {
       setLoading(true);
       const userId = localStorage.getItem("userId");
-      const response = await apiService.get<User>(`/users/${userId}`);
-      if (userId) {
-        await apiService.put(`/users/${userId}`, { status: response.status });
-      }
+      // const response = await apiService.get<User>(`/users/${userId}`);
+      // IMPLEMENT PUT ENDPOINT FIRST
+      // if (userId) {
+      //   await apiService.put(`/users/${userId}`, { status: response.status });
+      // }
     } catch (error) {
       console.error("Error during logout:", error);
     } finally {
       setLoading(false);
       clearToken();
       clearUserId();
-      router.push("/login");
+      router.replace("/login");
     }
   };
 
-//   // prevents rendering/flickering when not logged in 
-//   if (!isAuthorized) {
-//     return null;
-//   }
+// adapt this later if we want profile icons etc.
+const profileInitial = (
+  user?.name?.trim()?.charAt(0) ||
+  user?.username?.trim()?.charAt(0) ||
+  "U"
+).toUpperCase();
+
+  // prevents rendering/flickering when not logged in 
+  if (!isAuthorized) {
+    return null;
+  }
 
   return (
-    <div className="card-container">
+    <div className="profile-container">
       <Card title="My Profile" 
-      className="background-container"
-      styles={{
-          header: {
-            textAlign: "center",
-            fontSize: 20,
-            fontWeight: 600,
-          },
-          body: {
-            padding: "24px 32px",
-          },
-        }}
-        >
-        <a
-          onClick={() => router.push("/home")}
-          className="back-link"
-        >
-          <ArrowLeftOutlined disabled={loading}/> Back to Home
-        </a>
+      className="profile-card"
+      >
+        <Button type="link" className="redirect-link" onClick={() => router.push("/home")} disabled={loading}
+          icon={<ArrowLeftOutlined />} style={{ padding: 0, marginBottom: 16 }} > Back to Home 
+        </Button>
+        <div className="profile-avatar-wrap">
+          <Avatar size={96} className="profile-avatar">
+            {profileInitial}
+          </Avatar>
+        </div>
         {user && (
           <>
             <Descriptions 
@@ -101,28 +100,12 @@ const Profile: React.FC = () => {
               <Descriptions.Item label="Name:" >{user.name}</Descriptions.Item>
               <Descriptions.Item label="Username:" >{user.username}</Descriptions.Item>
               <Descriptions.Item label="Email:" >{user.email}</Descriptions.Item>
-              <Descriptions.Item label="Bio:">
-                <div style={{ 
-                  whiteSpace: "pre-wrap", 
-                  wordBreak: "break-word",
-                  lineHeight: "1.6",
-                  textAlign: "left",
-                  maxWidth: "360px",
-                }}>
-                  {user.bio || "No bio provided"}
-                </div>
-              </Descriptions.Item>
+              <Descriptions.Item label="Bio:"><div className="profile-bio">{user.bio || "No bio available."}</div></Descriptions.Item>
               <Descriptions.Item label="Status:" >{user.status}</Descriptions.Item>
             </Descriptions>
 
-            <div style={{ textAlign: "center", marginTop: 24 }}>
-              <Button onClick={() => router.push("/password")} loading={loading} disabled={loading}>
-                Edit Password
-              </Button>
-            </div>
-
-            <div style={{ textAlign: "center", marginTop: 24 }}>
-              <Button onClick={handleLogout} type="primary" danger loading={loading} disabled={loading}>
+            <div className="profile-actions">
+              <Button onClick={handleLogout} className="logout-button" loading={loading} disabled={loading}>
                 Logout
               </Button>
             </div>

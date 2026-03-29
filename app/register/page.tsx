@@ -10,8 +10,11 @@ import { useState } from "react";
 // import styles from "@/styles/page.module.css";
 
 interface FormFieldProps {
-  label: string;
-  value: string;
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  bio?: string;
 }
 
 const Register: React.FC = () => {
@@ -20,16 +23,8 @@ const Register: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // useLocalStorage hook example use
-  // The hook returns an object with the value and two functions
-  // Simply choose what you need from the hook:
-  const {
-    // value: token, // is commented out because we do not need the token value
-    set: setToken, // we need this method to set the value of the token to the one we receive from the POST request to the backend server API
-    // clear: clearToken, // is commented out because we do not need to clear the token when logging in
-  } = useLocalStorage<string>("token", ""); // note that the key we are selecting is "token" and the default value we are setting is an empty string
-  // if you want to pick a different token, i.e "usertoken", the line above would look as follows: } = useLocalStorage<string>("usertoken", "");
-  const { set: setUserId } = useLocalStorage<string>("userId", "")
+  const { set: setToken } = useLocalStorage<string>("token", "");
+  const { set: setUserId } = useLocalStorage<string>("userId", "");
 
   const handleRegister = async (values: FormFieldProps) => {
 
@@ -37,6 +32,13 @@ const Register: React.FC = () => {
 
     try {
       setLoading(true);
+      form.setFields([
+        { name: "username", errors: [] },
+        { name: "email", errors: [] },
+        { name: "password", errors: [] },
+        { name: "bio", errors: [] },
+        { name: "name", errors: [] },
+      ]);
 
       // Call the API service and let it handle JSON serialization and error handling
       const response = await apiService.post<User>("/register", values);
@@ -51,11 +53,18 @@ const Register: React.FC = () => {
       // Navigate to the user overview
       router.push("/home");
     } catch (error) {
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
+      const err = error as {status?: number; message?: string};
+      if (err.message?.includes("Username")) {
+        err.message = "Username already taken. Please choose a different one.";
+        form.setFields([{ name: "username", errors: [err.message] }]);
+      } else if (err.message?.includes("Email")) {
+        err.message = "Email already registered. Please use a different email address.";
+        form.setFields([{ name: "email", errors: [err.message] }]);
       } else {
-        setErrorMessage("An unknown error occurred during registration.");
+        err.message = "An error occurred during registration. Please try again.";
+        setErrorMessage(err.message);
       }
+
     } finally {
       setLoading(false);
     }
@@ -91,10 +100,10 @@ const Register: React.FC = () => {
           </Form.Item>
           <Form.Item
               name="email"
-              label="E-mail"
-              rules={[{ required: true, message: "Please input your E-Mail address!" }]}
+              label="Email"
+              rules={[{ required: true, message: "Please input your email address!" }]}
           >
-            <Input placeholder="Enter your e-mail address" disabled={loading} />
+            <Input placeholder="Enter your email address" disabled={loading} />
           </Form.Item>
           <Form.Item
             name="password"
