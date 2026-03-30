@@ -143,6 +143,51 @@ a {
   white-space: pre-wrap;
 }
 
+/* Waitingroom Page Styles */
+.host-loading-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.host-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.host-section-title.ant-typography {
+  margin-bottom: 16px !important;
+  color: var(--text) !important;
+}
+
+
+.host-session-meta {
+  width: 100%;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.host-meta-line.ant-typography {
+  color: var(--text) !important;
+}
+
+
+.participant-genre-wrap {
+  margin-bottom: 16px;
+}
+
+.participant-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participant-waiting-text.ant-typography {
+  color: rgba(245, 230, 211, 0.7) !important;
+}
+
 /* Home and History Page Styles */
 .home-container,
 .history-container {
