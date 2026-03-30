@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getApiDomain } from "@/utils/domain";
 
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
@@ -72,7 +73,8 @@ const Play: React.FC = () => {
 
 
     try {
-      const result = await fetch(`/session/${sessioncode}`, {
+      const apiDomain = getApiDomain();
+      const result = await fetch(`${apiDomain}/session/${sessioncode}`, {
 
         method: "GET",
       });
