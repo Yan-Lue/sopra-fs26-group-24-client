@@ -30,8 +30,10 @@ const Home: React.FC = () => {
 
     const errorMsg = sessionStorage.getItem("redirectError");
     if (errorMsg) {
-      messageApi.error(errorMsg);
       sessionStorage.removeItem("redirectError");
+      setTimeout(() => {
+        messageApi.error(errorMsg);
+      }, 0);
     }
   }, [messageApi, router]);
 
