@@ -37,28 +37,26 @@ const SessionPage: React.FC = () => {
     const verifyHostAccess = async () => {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
-      const sessionId = localStorage.getItem("sessionId");
+      const storedSessionCode = localStorage.getItem("sessionCode");
 
-      if (!token || !userId || !sessionId) {
+      if (!token || !userId || !storedSessionCode) {
         sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
         router.replace("/login");
         return;
       }
-      // make sure that both are numbers
+
       const parsedUserId = Number(userId);
-      const parsedSessionId = Number(sessionId);
-      
-    /* possible Check if userId and sessionId are valid numbers before making the API call 
-      - NaN checks if not a number
-      if (Number.isNaN(parsedUserId) || Number.isNaN(parsedSessionId)) {
-        setErrorMessage("Invalid user or session id.");
+
+    /* possible Check if userId is a valid number before making the API call
+      if (Number.isNaN(parsedUserId)) {
+        setErrorMessage("Invalid user id.");
         setIsLoading(false);
         return;
       }
       */
 
       try {
-        const session = await apiService.get<SessionResponse>(`/session/${parsedSessionId}`);
+        const session = await apiService.get<SessionResponse>(`/session/${storedSessionCode}`);
         setSessionCode(session.sessionCode);
         setJoinedUsers(1);
         setIsHost(session.hostId === parsedUserId);
@@ -135,21 +133,7 @@ const SessionPage: React.FC = () => {
                 <InputNumber min={1} max={20} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item
-                label="Time per Round"
-                name="timePerRound"
-                rules={[{ required: true, message: "Time per round is required." }]}
-              >
-                <Select
-                  placeholder="Select round time"
-                  options={[
-                    { value: 15, label: "15 seconds" },
-                    { value: 30, label: "30 seconds" },
-                    { value: 45, label: "45 seconds" },
-                    { value: 60, label: "60 seconds" },
-                  ]}
-                />
-              </Form.Item>
+            
             </Form>
 
             <div className="host-session-meta">

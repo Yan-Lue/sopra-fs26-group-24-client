@@ -160,7 +160,6 @@ a {
   color: var(--text) !important;
 }
 
-
 .host-session-meta {
   width: 100%;
   margin-top: 24px;
@@ -173,6 +172,11 @@ a {
   color: var(--text) !important;
 }
 
+.participant-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
 .participant-genre-wrap {
   margin-bottom: 16px;
@@ -185,8 +189,56 @@ a {
 }
 
 .participant-waiting-text.ant-typography {
-  color: rgba(245, 230, 211, 0.7) !important;
+  color: var(--text) !important;
 }
+
+.session-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px;
+  display: flex;
+  gap: 44px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.session-side-card {
+  flex: 0 1 340px;
+  max-width: 340px;
+}
+
+.session-main-card {
+  flex: 0 1 500px;
+  max-width: 620px;
+}
+
+.waiting-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leave-session-btn.ant-btn {
+  margin-top: 16px;
+  align-self: center;
+  min-width: 180px;
+}
+
+@media (max-width: 980px) {
+  .session-layout {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .session-side-card,
+  .session-main-card {
+    flex: 1 1 auto;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+
 
 /* Home and History Page Styles */
 .home-container,
