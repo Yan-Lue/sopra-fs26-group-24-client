@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getApiDomain } from "@/utils/domain";
 
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
@@ -42,16 +43,16 @@ const Play: React.FC = () => {
 
 
   useEffect(() => {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("userId");
-  
-      if (!token || !userId || token === "" || userId === "") {
-        sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
-        router.replace("/login");
-        return;
-      }
-  
-      setIsAuthorized(true);
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+
+    if (!token || !userId || token === "" || userId === "") {
+      sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+      router.replace("/login");
+      return;
+    }
+
+    setIsAuthorized(true);
 
   }, [router]);
 
@@ -59,7 +60,7 @@ const Play: React.FC = () => {
     console.log("Create session values:", values);
   };
 
-  
+
   const handleJoinSession = async (values: JoinSessionFormValues) => {
     const sessioncode = values.sessionCode.trim();
     console.log("Join session values:", values);
@@ -70,24 +71,26 @@ const Play: React.FC = () => {
       return;
     }
 
-  
-  try {
-    const result = await fetch(`/session/${sessioncode}`, {
-      
-      method: "GET",
-    });
 
-    if (!result.ok) {
-      message.error("Session not found. Please check the session code and try again.");
-      return;
+    try {
+      const apiDomain = getApiDomain();
+      const result = await fetch(`${apiDomain}/session/${sessioncode}`, {
+
+        method: "GET",
+      });
+
+      if (!result.ok) {
+        sessionStorage.setItem("redirectError", "Session not found. Please check the session code and try again.");
+        router.push("/home");
+        return;
+      }
+
+      message.success("Session found! Joining session...");
+      router.push(`/session/${sessioncode}`);
+    } catch (error) {
+      message.error("Server can not be reached. Please try again later.");
     }
-
-    message.success("Session found! Joining session...");
-    router.push(`/session/${sessioncode}`);
-  } catch (error) {
-    message.error("Server can not be reached. Please try again later.");
-  }
-};
+  };
 
   if (!isAuthorized) {
     return null;
@@ -95,7 +98,7 @@ const Play: React.FC = () => {
 
   return (
     <div className="page-with-nav">
-        <Navbar />
+      <Navbar />
 
       <div className="play-container">
         <Card className="play-card" title="Create New Session">
@@ -105,36 +108,36 @@ const Play: React.FC = () => {
             layout="vertical"
             onFinish={handleCreateSession}
           >
-          <Form.Item
-          style={{ marginTop: 24 }}
-            name="sessionName"
-            label="Session Name"
-            rules={[{ required: true, message: "Please input a session name!" }]}
-          >
-            <Input placeholder="Enter a Session name" /> 
-          </Form.Item>
+            <Form.Item
+              style={{ marginTop: 24 }}
+              name="sessionName"
+              label="Session Name"
+              rules={[{ required: true, message: "Please input a session name!" }]}
+            >
+              <Input placeholder="Enter a Session name" />
+            </Form.Item>
 
-          <Form.Item
-            name= "numberOfPlayers"
-            label="Number of Players"
-            rules={[{ required: true, message: "Please input the number of players!" }]}
-          >
+            <Form.Item
+              name="numberOfPlayers"
+              label="Number of Players"
+              rules={[{ required: true, message: "Please input the number of players!" }]}
+            >
 
-            <Select
-              placeholder={
-                <span style={{ color: "var(--accent)", opacity: 1 }}>
-                  Select the number of players...
-                </span>
-              }
-              options={playerOptions}
-            />
-          </Form.Item>
+              <Select
+                placeholder={
+                  <span style={{ color: "var(--accent)", opacity: 1 }}>
+                    Select the number of players...
+                  </span>
+                }
+                options={playerOptions}
+              />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="play-button">
-              Create Session
-            </Button>
-          </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" className="play-button">
+                Create Session
+              </Button>
+            </Form.Item>
           </Form>
         </Card>
 
@@ -142,20 +145,20 @@ const Play: React.FC = () => {
           <p className="play-description">{joinSessionDescription}</p>
 
           <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
-          <Form.Item
-            style={{ marginTop: 24 }}
-            name="sessionCode"
-            label="Session Code"
-            rules={[{ required: true, message: "Please input the session code!" }]}
-          >
-            <Input placeholder="XXX-XXX" style={{ textAlign: "center" }}/>
-          </Form.Item>
+            <Form.Item
+              style={{ marginTop: 24 }}
+              name="sessionCode"
+              label="Session Code"
+              rules={[{ required: true, message: "Please input the session code!" }]}
+            >
+              <Input placeholder="XXX-XXX" style={{ textAlign: "center" }} />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="play-button">
-              Join Session
-            </Button>
-          </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" className="play-button">
+                Join Session
+              </Button>
+            </Form.Item>
           </Form>
         </Card>
       </div>
