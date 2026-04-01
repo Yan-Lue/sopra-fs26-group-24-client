@@ -58,6 +58,10 @@ const Home: React.FC = () => {
     router.push("/history");
   };
 
+  if (!isAuthorized) {
+    return null;
+  }
+
   return (
     <>
       {contextHolder}
