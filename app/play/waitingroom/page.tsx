@@ -76,7 +76,6 @@ const SessionPage: React.FC = () => {
       <div className="page-with-nav">
         <Navbar />
         <div className="play-container host-loading-wrap">
-            //should hopefully spin
           <Spin size="large" />
         </div>
       </div>
