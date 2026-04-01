@@ -153,6 +153,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  color: var(--text) !important;
 }
 
 .host-section-title.ant-typography {
@@ -216,6 +217,11 @@ a {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+}
+
+.waiting-room-form .ant-typography {
+  color: var(--) !important;
 }
 
 .leave-session-btn.ant-btn {

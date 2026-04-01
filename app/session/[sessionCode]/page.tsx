@@ -6,7 +6,7 @@ import { Button, Card, Form, InputNumber, Select, Space, Spin, Tag, Typography }
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const { Title, Paragraph } = Typography;
+//const { Title, Paragraph } = Typography;
 
 interface SessionResponse {
   sessionId: number;
@@ -114,7 +114,8 @@ const SessionWaitingRoom: React.FC = () => {
         <Card className="play-card participant-card session-side-card" title="Waiting Room">
             <Form layout="vertical" className="waiting-room-form">
               <Typography.Title level={5} className="host-section-title">Waiting Room</Typography.Title>
-              //TODO: implement dynamic joined users count and check colors and fonts!!
+              {/* TODO: implement dynamic joined users count and check colors and fonts!! */}
+                <Typography.Text className="host-meta-line">Joined Users: {joinedUsers}</Typography.Text>
 
                 <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
                 
@@ -179,9 +180,10 @@ const SessionWaitingRoom: React.FC = () => {
                     <Button type="primary" block onClick={() => console.log("Start session")}>
                       Start Session
                     </Button>
-                    //TODO: implement end session functionality
+                    {/* TODO: implement end session functionality */}
                     <Button block onClick={() => console.log("End session")}>
                       End Session
+                      -- Implement End-functionality
                     </Button>
                   </div>
                 </Card>
