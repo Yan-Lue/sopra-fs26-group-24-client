@@ -35,7 +35,6 @@ interface JoinSessionFormValues {
 interface SessionResponse {
   sessionCode: string;
   sessionToken: string;
-  sessionId: number;
   hostId: number;
 }
 
@@ -88,15 +87,15 @@ const Play: React.FC = () => {
 
       const session = await apiService.post<SessionResponse>("/session", payload);
 
-      const { sessionId, sessionCode, hostId } = session;
+      const {sessionCode, hostId } = session;
 
-      if (!sessionId || !sessionCode) {
+      if (!sessionCode) {
         message.error("Failed to create session. Please try again.");
         return;
       }
 
       // Keep sessionId for frontend logic.
-      localStorage.setItem("sessionId", sessionId.toString());
+      //localStorage.setItem("sessionId", sessionId.toString());
 
       //keep code for ev. joining?
       localStorage.setItem("sessionCode", sessionCode);

@@ -86,7 +86,7 @@ a {
 .play-card .ant-card-head-title,
 .profile-card .ant-card-head-title {
   font-family: "Cormorant", serif;
-  font-size: 24px;
+  font-size: 36px;
   font-weight: 700;
   color: var(--text) !important;
 }
@@ -159,18 +159,22 @@ a {
 .host-section-title.ant-typography {
   margin-bottom: 16px !important;
   color: var(--text) !important;
+  font-size: 30px !important;
+  font-weight: 600;
 }
 
 .host-session-meta {
   width: 100%;
-  margin-top: 24px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .host-meta-line.ant-typography {
   color: var(--text) !important;
+  font-size: 18px !important;
+  line-height: 1.45;
 }
 
 .participant-card .ant-card-body {
@@ -180,25 +184,49 @@ a {
 }
 
 .participant-genre-wrap {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .participant-settings {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .participant-waiting-text.ant-typography {
   color: var(--text) !important;
+  font-size: 18px !important;
+}
+
+.session-layout .session-side-card .ant-card-head-title,
+.session-layout .session-main-card .ant-card-head-title {
+  font-size: 40px !important;
+}
+
+.session-layout .host-card .ant-form-item-label > label,
+.session-layout .participant-card .ant-form-item-label > label {
+  font-size: 18px !important;
+  color: var(--text) !important;
+}
+
+.session-layout .host-card .ant-select-selection-item,
+.session-layout .host-card .ant-select-selection-placeholder,
+.session-layout .host-card .ant-input-number-input,
+.session-layout .host-card .ant-btn,
+.session-layout .participant-card .ant-btn {
+  font-size: 16px !important;
+}
+
+.session-layout .ant-tag {
+  font-size: 15px;
 }
 
 .session-layout {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 36px;
+  padding: 32px;
   display: flex;
-  gap: 44px;
+  gap: 24px;
   align-items: stretch;
   justify-content: center;
 }
@@ -213,19 +241,28 @@ a {
   max-width: 620px;
 }
 
+.session-side-card .ant-card-body,
+.session-main-card .ant-card-body {
+  padding: 16px;
+}
+
 .waiting-room-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
 
+.waiting-room-form .ant-form-item {
+  margin-bottom: 4px !important;
 }
 
 .waiting-room-form .ant-typography {
-  color: var(--) !important;
+  color: var(--text) !important;
+  font-size: 16px;
 }
 
 .leave-session-btn.ant-btn {
-  margin-top: 16px;
+  margin-top: 12px;
   align-self: center;
   min-width: 180px;
 }

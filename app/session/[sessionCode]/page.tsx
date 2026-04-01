@@ -1,7 +1,6 @@
 "use client";
 
 import { useApi } from "@/hooks/useApi";
-import Navbar from "@/components/Navbar";
 import { Button, Card, Form, InputNumber, Select, Space, Spin, Tag, Typography } from "antd";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -94,7 +93,7 @@ const SessionWaitingRoom: React.FC = () => {
   if (isLoading) {
     return (
       <div className="page-with-nav">
-        <Navbar />
+        
         <div className="play-container host-loading-wrap">
           <Spin size="large" />
         </div>
@@ -108,12 +107,10 @@ const SessionWaitingRoom: React.FC = () => {
 
   return (
     <div className="page-with-nav">
-      <Navbar />
-
       <div className="session-layout">
         <Card className="play-card participant-card session-side-card" title="Waiting Room">
             <Form layout="vertical" className="waiting-room-form">
-              <Typography.Title level={5} className="host-section-title">Waiting Room</Typography.Title>
+              <Typography.Title level={3} className="host-section-title">Waiting Room</Typography.Title>
               {/* TODO: implement dynamic joined users count and check colors and fonts!! */}
                 <Typography.Text className="host-meta-line">Joined Users: {joinedUsers}</Typography.Text>
 
@@ -128,7 +125,7 @@ const SessionWaitingRoom: React.FC = () => {
         {isHost ? (
                 <Card className="play-card host-card session-main-card" title="Host Controls">
                   <Form layout="vertical">
-                    <Typography.Title level={5} className="host-section-title">Session Filters</Typography.Title>
+                    <Typography.Title level={3} className="host-section-title">Session Filters</Typography.Title>
       
                     <Form.Item label="Genre (optional)">
                       <Space size={[8, 8]} wrap>
@@ -170,8 +167,6 @@ const SessionWaitingRoom: React.FC = () => {
                     >
                       <InputNumber min={1} max={20} style={{ width: "100%" }} />
                     </Form.Item>
-      
-                  
                   </Form>
       
                   <div className="host-session-meta">
@@ -189,7 +184,7 @@ const SessionWaitingRoom: React.FC = () => {
                 </Card>
               ) : (
                 <Card className="play-card host-card session-main-card" title="Waiting Room">
-                  <Typography.Title level={5} className="host-section-title">Session Filters</Typography.Title>
+                  <Typography.Title level={3} className="host-section-title">Session Filters</Typography.Title>
                   <Space size={[8, 8]} wrap className="participant-genre-wrap">
                     {["Action", "Comedy", "Sci-Fi"].map((genre) => (
                       <Tag key={genre}>{genre}</Tag>
