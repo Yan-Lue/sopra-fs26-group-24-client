@@ -67,6 +67,23 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const handleGuestDeletion = async () => {
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        await apiService.delete(`/users/${userId}`);
+      } else {
+        messageApi.error("User ID not found.");
+      } 
+    } catch (error) {
+      messageApi.error("Error occurred while deleting guest user.");
+    } finally {
+      setLoading(false);
+      router.replace("/login");
+    }
+  };
+
   const handleNavClick = (href: string) => {
     if (href === "/history" && isGuestUser()) {
       messageApi.info("Guest users have limited access. Please log in to view history.");
@@ -97,7 +114,7 @@ const Navbar: React.FC = () => {
             <Button
               type="primary"
               className="top-nav-login"
-              onClick={handleLogout} // for guests this will just clear the guest token and redirect to login, effectively "logging out" the guest session
+              onClick={handleGuestDeletion}
             >
               Login
             </Button>
