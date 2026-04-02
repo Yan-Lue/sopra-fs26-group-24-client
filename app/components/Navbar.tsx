@@ -1,5 +1,6 @@
 "use client";
 
+import { useApi } from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { UserOutlined } from "@ant-design/icons";
 import { Button, message } from "antd";
@@ -13,12 +14,14 @@ const navItems = [
 ];
 
 const Navbar: React.FC = () => {
+  const apiService = useApi();
   const router = useRouter();
   const pathname = usePathname();
   const { clear: clearToken } = useLocalStorage<string>("token", "");
   const { clear: clearUserId } = useLocalStorage<string>("userId", "");
   const [messageApi, contextHolder] = message.useMessage();
   const [isGuest, setIsGuest] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // to check the stored string for Guest- prefix we need to parse it first, since we store it as JSON string
   const readStorageString = (key: string) => {
@@ -47,11 +50,38 @@ const Navbar: React.FC = () => {
     router.push("/profile");
   };
 
-  const handleLogout = () => {
-    clearToken();
-    clearUserId();
-    // have to put status to offline here
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        await apiService.put(`/users/${userId}`, { status: "offline" });
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      setLoading(false);
+      clearToken();
+      clearUserId();
+      router.replace("/login");
+    }
+  };
+
+  const handleGuestDeletion = async () => {
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        await apiService.delete(`/users/${userId}`);
+      } else {
+        messageApi.error("User ID not found.");
+      } 
+    } catch (error) {
+      messageApi.error("Error occurred while deleting guest user.");
+    } finally {
+      setLoading(false);
+      router.replace("/login");
+    }
   };
 
   const handleNavClick = (href: string) => {
@@ -84,7 +114,7 @@ const Navbar: React.FC = () => {
             <Button
               type="primary"
               className="top-nav-login"
-              onClick={handleLogout} // for guests this will just clear the guest token and redirect to login, effectively "logging out" the guest session
+              onClick={handleGuestDeletion}
             >
               Login
             </Button>
