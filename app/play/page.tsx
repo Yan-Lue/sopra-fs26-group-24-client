@@ -5,7 +5,8 @@ import { getApiDomain } from "@/utils/domain";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
+import { getApiDomain } from "@/utils/domain";
+import { useApi } from "@/hooks/useApi";
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
 
@@ -18,15 +19,21 @@ Enter the unique session code below and start swiping through movies with your g
 
 interface CreateSessionFormValues {
   sessionName: string;
-  numberOfPlayers: number;
+  maxPlayers: number;
+}
+
+interface CreateSessionPayload extends CreateSessionFormValues {
+  hostId: number;
 }
 
 interface JoinSessionFormValues {
   sessionCode: string;
 }
 
-interface JoinSessionFormValues {
+interface SessionResponse {
   sessionCode: string;
+  sessionToken: string;
+  hostId: number;
 }
 
 // Generate player options for the Select component
@@ -40,6 +47,8 @@ const playerOptions = Array.from({ length: 16 }, (_, index) => ({
 const Play: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
+  const apiService = useApi();
+  const [loading, setLoading] = useState(false);
 
 
   useEffect(() => {
@@ -56,10 +65,49 @@ const Play: React.FC = () => {
 
   }, [router]);
 
-  const handleCreateSession = (values: CreateSessionFormValues) => {
-    console.log("Create session values:", values);
-  };
+  const handleCreateSession = async (values: CreateSessionFormValues) => {
+    if (loading) return;
 
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      message.error("User ID not found. Please log in again.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Add hostId from localStorage to the values
+      const payload: CreateSessionPayload = {
+        ...values,
+        hostId: Number(userId),
+      };
+
+      const session = await apiService.post<SessionResponse>("/session", payload);
+
+      const {sessionCode, hostId } = session;
+
+      if (!sessionCode) {
+        message.error("Failed to create session. Please try again.");
+        return;
+      }
+
+      // Keep sessionId for frontend logic.
+      //localStorage.setItem("sessionId", sessionId.toString());
+
+      //keep code for ev. joining?
+      localStorage.setItem("sessionCode", sessionCode);
+
+      localStorage.setItem("hostId", hostId.toString());
+
+      router.push(`/session/${sessionCode}`);
+    } catch (error) {
+      console.error("Create session error:", error);
+      message.error("Failed to create session. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleJoinSession = async (values: JoinSessionFormValues) => {
     const sessioncode = values.sessionCode.trim();
@@ -118,7 +166,7 @@ const Play: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              name="numberOfPlayers"
+              name="maxPlayers"
               label="Number of Players"
               rules={[{ required: true, message: "Please input the number of players!" }]}
             >

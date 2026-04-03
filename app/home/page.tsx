@@ -58,7 +58,6 @@ const Home: React.FC = () => {
     router.push("/history");
   };
 
-  // prevents rendering/flickering when not logged in 
   if (!isAuthorized) {
     return null;
   }
