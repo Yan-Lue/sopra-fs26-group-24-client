@@ -384,31 +384,13 @@ a {
 }
 
 /* Profile Page Styles */
-.profile-descriptions .ant-descriptions-item-label {
-  color: var(--text) !important;
-  font-weight: 700 !important;
-  background: var(--secondary) !important;
-  border-color: var(--secondary) !important;
-}
-
-.profile-descriptions .ant-descriptions-item-content {
-  color: var(--text) !important;
-  background: rgba(74, 31, 43, 0.25) !important;
-  border-color: var(--secondary) !important;
-}
-
-.profile-bio {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-  text-align: left;
-  max-width: 100%;
-}
 
 .profile-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
   justify-content: center;
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .profile-avatar-wrap {
@@ -427,6 +409,62 @@ a {
   line-height: 1;
 }
 
+.profile-edit-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.profile-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-fields .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.profile-fields .ant-form-item-label > label {
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.profile-fields .ant-form-item-explain-error {
+  color: #ff0000 !important;
+  margin-top: 4px;
+}
+
+.profile-fields .profile-input input::placeholder,
+.profile-fields .profile-input::placeholder,
+.profile-fields .profile-textarea textarea::placeholder {
+  color: rgba(255, 255, 255, 0.8) !important;
+  opacity: 1 !important;
+}
+
+.profile-input.ant-input-affix-wrapper,
+.profile-input.ant-input,
+.profile-textarea.ant-input-textarea textarea {
+  background: rgba(74, 31, 43, 0.25) !important;
+  border-color: var(--secondary) !important;
+  color: var(--text) !important;
+}
+
+.profile-input.ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+.profile-input.ant-input-affix-wrapper .ant-input-prefix {
+  color: var(--accent) !important;
+  margin-inline-end: 8px;
+}
+
+.profile-input.ant-input-affix-wrapper:focus-within,
+.profile-input.ant-input:focus,
+.profile-textarea.ant-input-textarea textarea:focus {
+  border-color: var(--primary-gold) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.22) !important;
+}
+
 /* Logout Button Styles */
 .logout-button.ant-btn {
   background: var(--primary-gold) !important;
@@ -442,4 +480,29 @@ a {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
   color: var(--background) !important;
+}
+
+/* Editing Button Styles */
+.edit-button.ant-btn {
+  background: rgba(114, 246, 129, 0.8) !important;
+  color: var(--background) !important;
+  font-weight: 600;
+  min-width: 140px;
+  box-shadow: none !important;
+}
+
+.cancel-button.ant-btn {
+  background: rgba(255, 77, 79, 0.8) !important;
+  color: var(--background) !important;
+  font-weight: 600;
+  min-width: 140px;
+  box-shadow: none !important;
+}
+
+.save-button.ant-btn {
+  background: rgba(114, 246, 129, 0.8) !important;
+  color: var(--background) !important;
+  font-weight: 600;
+  min-width: 140px;
+  box-shadow: none !important;
 }

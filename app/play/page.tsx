@@ -1,14 +1,12 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
+import { getApiDomain } from "@/utils/domain";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getApiDomain } from "@/utils/domain";
 import { useApi } from "@/hooks/useApi";
-
-
-
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
 
@@ -201,7 +199,7 @@ const Play: React.FC = () => {
               label="Session Code"
               rules={[{ required: true, message: "Please input the session code!" }]}
             >
-              <Input placeholder="XXX-XXX" style={{ textAlign: "center" }} />
+              <Input placeholder="Enter Session Code" />
             </Form.Item>
 
             <Form.Item>
