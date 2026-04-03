@@ -1,12 +1,11 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
+import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getApiDomain } from "@/utils/domain";
-import { useApi } from "@/hooks/useApi";
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
 
