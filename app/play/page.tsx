@@ -1,8 +1,6 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
-import { getApiDomain } from "@/utils/domain";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,6 +33,18 @@ interface SessionResponse {
   hostId: number;
 }
 
+interface SessionPutDTO {
+  id: number;
+  token: string;
+}
+
+interface JoinSessionResponse {
+  sessionCode: string;
+  sessionId: number;
+  sessionToken: string;
+  hostId: number;
+}
+
 // Generate player options for the Select component
 const playerOptions = Array.from({ length: 16 }, (_, index) => ({
   value: index + 1,
@@ -48,7 +58,7 @@ const Play: React.FC = () => {
   const router = useRouter();
   const apiService = useApi();
   const [loading, setLoading] = useState(false);
-
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -69,7 +79,7 @@ const Play: React.FC = () => {
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      message.error("User ID not found. Please log in again.");
+      messageApi.error("User ID not found. Please log in again.");
       return;
     }
 
@@ -87,7 +97,7 @@ const Play: React.FC = () => {
       const {sessionCode, hostId } = session;
 
       if (!sessionCode) {
-        message.error("Failed to create session. Please try again.");
+        messageApi.error("Failed to create session. Please try again.");
         return;
       }
 
@@ -102,114 +112,128 @@ const Play: React.FC = () => {
       router.push(`/session/${sessionCode}`);
     } catch (error) {
       console.error("Create session error:", error);
-      message.error("Failed to create session. Please try again.");
+      messageApi.error("Failed to create session. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleJoinSession = async (values: JoinSessionFormValues) => {
-    const sessioncode = values.sessionCode.trim();
-    console.log("Join session values:", values);
+  const trimmedCode = values.sessionCode.trim();
+  if (!trimmedCode) {
+    messageApi.error("Please enter a session code.");
+    return;
+  }
 
-    //check if session code is empty
-    if (!sessioncode) {
-      message.error("Please enter a session code.");
-      return;
-    }
+  const token = parseStorageValue<string>(localStorage.getItem("token"));
+  const userIdRaw = parseStorageValue<string | number>(localStorage.getItem("userId"));
+  const userId = Number(userIdRaw);
 
+  if (!token || Number.isNaN(userId)) {
+    sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+    router.replace("/login");
+    return;
+  }
 
-    try {
-      const apiDomain = getApiDomain();
-      const result = await fetch(`${apiDomain}/session/${sessioncode}`, {
-
-        method: "GET",
-      });
-
-      if (!result.ok) {
-        sessionStorage.setItem("redirectError", "Session not found. Please check the session code and try again.");
-        router.push("/home");
-        return;
-      }
-
-      message.success("Session found! Joining session...");
-      router.push(`/session/${sessioncode}`);
-    } catch (error) {
-      message.error("Server can not be reached. Please try again later.");
-    }
+  const payload: SessionPutDTO = {
+    id: userId,
+    token,
   };
+
+  try {
+    const session = await apiService.put<JoinSessionResponse>(`/session/${trimmedCode}`, payload);
+
+    // Optional local hint only (not global), implement in backend for full functionality
+    const key = `joinedUsers:${session.sessionCode}`;
+    const current = Number(sessionStorage.getItem(key) ?? "1");
+    sessionStorage.setItem(key, String(current + 1));
+
+    messageApi.success("Session joined successfully!");
+    router.push(`/session/${session.sessionCode}`);
+  } catch (error) {
+    console.error("Join session error:", error);
+    messageApi.error("Failed to join session. Please check the code and try again.");
+  }
+};
+
+  const parseStorageValue = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as unknown as T;
+  }
+};
 
   if (!isAuthorized) {
     return null;
   }
 
   return (
-    <div className="page-with-nav">
-      <Navbar />
+    <>{contextHolder}
+    <div className="play-container">
+      <Card className="play-card" title="Create New Session">
+        <p className="play-description">{createSessionDescription}</p>
 
-      <div className="play-container">
-        <Card className="play-card" title="Create New Session">
-          <p className="play-description">{createSessionDescription}</p>
-
-          <Form<CreateSessionFormValues>
-            layout="vertical"
-            onFinish={handleCreateSession}
+        <Form<CreateSessionFormValues>
+          layout="vertical"
+          onFinish={handleCreateSession}
+        >
+          <Form.Item
+            style={{ marginTop: 24 }}
+            name="sessionName"
+            label="Session Name"
+            rules={[{ required: true, message: "Please input a session name!" }]}
           >
-            <Form.Item
-              style={{ marginTop: 24 }}
-              name="sessionName"
-              label="Session Name"
-              rules={[{ required: true, message: "Please input a session name!" }]}
-            >
-              <Input placeholder="Enter a Session name" />
-            </Form.Item>
+            <Input placeholder="Enter a Session name" />
+          </Form.Item>
 
-            <Form.Item
-              name="maxPlayers"
-              label="Number of Players"
-              rules={[{ required: true, message: "Please input the number of players!" }]}
-            >
+          <Form.Item
+            name="maxPlayers"
+            label="Number of Players"
+            rules={[{ required: true, message: "Please input the number of players!" }]}
+          >
 
-              <Select
-                placeholder={
-                  <span style={{ color: "var(--accent)", opacity: 1 }}>
-                    Select the number of players...
-                  </span>
-                }
-                options={playerOptions}
-              />
-            </Form.Item>
+            <Select
+              placeholder={
+                <span style={{ color: "var(--accent)", opacity: 1 }}>
+                  Select the number of players...
+                </span>
+              }
+              options={playerOptions}
+            />
+          </Form.Item>
 
-            <Form.Item>
-              <Button type="primary" htmlType="submit" className="play-button">
-                Create Session
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className="play-button">
+              Create Session
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
 
-        <Card className="play-card" title="Join Session">
-          <p className="play-description">{joinSessionDescription}</p>
+      <Card className="play-card" title="Join Session">
+        <p className="play-description">{joinSessionDescription}</p>
 
-          <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
-            <Form.Item
-              style={{ marginTop: 24 }}
-              name="sessionCode"
-              label="Session Code"
-              rules={[{ required: true, message: "Please input the session code!" }]}
-            >
-              <Input placeholder="Enter Session Code" />
-            </Form.Item>
+        <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
+          <Form.Item
+            style={{ marginTop: 24 }}
+            name="sessionCode"
+            label="Session Code"
+            rules={[{ required: true, message: "Please input the session code!" }]}
+          >
+            <Input placeholder="Enter Session Code" />
+          </Form.Item>
 
-            <Form.Item>
-              <Button type="primary" htmlType="submit" className="play-button">
-                Join Session
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      </div>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className="play-button">
+              Join Session
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
+    </>
   );
 };
 

@@ -2,10 +2,15 @@
 
 import { useApi } from "@/hooks/useApi";
 import { Button, Card, Form, InputNumber, Select, Space, Spin, Tag, Typography } from "antd";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 //const { Title, Paragraph } = Typography;
+
+interface SessionPutDTO {
+  id: number;
+  token: string;
+}
 
 interface SessionResponse {
   sessionId: number;
@@ -37,58 +42,68 @@ const SessionWaitingRoom: React.FC = () => {
   const [joinedUsers, setJoinedUsers] = useState(0);
 
   useEffect(() => {
-    const validateSession = async (): Promise<SessionResponse> => {
-      const session = await apiService.get<SessionResponse>(`/session/${routeSessionCode}`);
-      setIsValid(true);
-      return session;
-    };
+    const verifySessionAccess = async () => {
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      const userIdRaw = parseStorageValue<string | number>(localStorage.getItem("userId"));
+      const parsedUserId = Number(userIdRaw);
 
-    const verifyHostAccess = async () => {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("userId");
-
-      if (!token || !userId || !routeSessionCode) {
+      if (!token || Number.isNaN(parsedUserId) || !routeSessionCode) {
         sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
         router.replace("/login");
         return;
       }
 
-      const parsedUserId = Number(userId);
-      //const parsedSessionId = Number(sessionId);
-      
-    /* possible Check if userId and sessionId are valid numbers before making the API call 
-      - NaN checks if not a number
-      if (Number.isNaN(parsedUserId) || Number.isNaN(parsedSessionId)) {
-        setErrorMessage("Invalid user or session id.");
-        setIsLoading(false);
-        return;
-      }
-      */
+      const payload: SessionPutDTO = {
+        id: parsedUserId,
+        token,
+      };
 
       try {
-        const session = await validateSession();
+        const session = await apiService.put<SessionResponse>(`/session/${routeSessionCode}`, payload);
+
         setSessionCode(session.sessionCode);
-        setJoinedUsers(1);
         setIsHost(session.hostId === parsedUserId);
-      } catch {
-        alert("Failed to verify host session access. Please try again if you are the host.");
+        // Local hint only (not global)
+        const key = `joinedUsers:${session.sessionCode}`;
+        const hinted = Number(sessionStorage.getItem(key) ?? "1");
+        setJoinedUsers(hinted);
+
+        setIsValid(true);
+      } catch (error) {
+        console.error("Failed to verify session access:", error);
+        alert("Failed to verify host session access.");
         router.replace("/play");
       } finally {
         setIsLoading(false);
       }
     };
 
-    void verifyHostAccess();
-  }, [routeSessionCode, apiService, router]);
+    void verifySessionAccess();
+  }, [apiService, routeSessionCode, router]);
 
   const handleLeave = () => {
-    router.push("/home");
+    if (sessionCode) {
+      const key = `joinedUsers:${sessionCode}`;
+      const current = Number(sessionStorage.getItem(key) ?? "1");
+      const next = Math.max(current - 1, 0);
+
+      if (next === 0) {
+        sessionStorage.removeItem(key);
+      } else {
+        sessionStorage.setItem(key, String(next));
+      }
+    }
+    router.replace("/home");
   };
 
-  /* if (!isValid) {
-    return null;
+  const parseStorageValue = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as unknown as T;
   }
-    */
+};
 
   if (isLoading) {
     return (

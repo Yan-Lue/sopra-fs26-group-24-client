@@ -57,14 +57,6 @@ const Profile: React.FC = () => {
       try {
         const userData = await apiService.get<User>(`/users/${userId}`);
         setUser(userData);
-        form.setFieldsValue({
-          name: userData.name || "",
-          username: userData.username || "",
-          email: userData.email || "",
-          bio: userData.bio || "",
-          oldPassword: "",
-          newPassword: "",
-        });
       } catch (error) {
         console.error("Error fetching profile:", error);
         router.replace("/login");
@@ -73,6 +65,19 @@ const Profile: React.FC = () => {
 
     fetchProfile();
   }, [apiService, router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    form.setFieldsValue({
+      name: user.name || "",
+      username: user.username || "",
+      email: user.email || "",
+      bio: user.bio || "",
+      oldPassword: "",
+      newPassword: "",
+    });
+  }, [user, form]);
 
   const handleLogout = async () => {
     try {
