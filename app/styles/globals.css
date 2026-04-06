@@ -640,3 +640,107 @@ color: var(--background) !important;
   min-width: 140px;
   box-shadow: none !important;
 }
+
+/* Vote Page Styles */
+.vote-card.ant-card {
+max-width: 430px;
+}
+
+.vote-screen {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 14px;
+width: 100%;
+}
+
+.vote-poster-wrap {
+width: 100%;
+max-width: 330px;
+border-radius: 24px;
+overflow: hidden;
+background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), rgba(45, 19, 25, 0.96));
+box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+}
+
+.vote-poster {
+display: block;
+width: 100%;
+aspect-ratio: 2 / 3;
+object-fit: cover;
+object-position: center;
+}
+
+.vote-poster-placeholder {
+width: 100%;
+aspect-ratio: 2 / 3;
+display: flex;
+align-items: center;
+justify-content: center;
+color: var(--accent);
+background: rgba(255, 255, 255, 0.03);
+}
+
+.vote-info {
+width: 100%;
+max-width: 330px;
+text-align: left;
+}
+
+.vote-info .ant-typography,
+.vote-info .ant-typography h2 {
+color: var(--text) !important;
+}
+
+.vote-description.ant-typography {
+color: rgba(245, 230, 211, 0.92) !important;
+line-height: 1.55;
+font-size: 15px;
+}
+
+.vote-actions {
+width: 100%;
+max-width: 330px;
+display: flex;
+justify-content: center;
+align-items: center;
+gap: 16px;
+padding-top: 6px;
+}
+
+.vote-action-button.ant-btn {
+width: 60px;
+height: 60px;
+border-radius: 999px;
+font-size: 22px;
+font-weight: 700;
+border-width: 2px;
+box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
+transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.vote-action-button.ant-btn:hover {
+transform: translateY(-2px) scale(1.03);
+}
+
+.vote-action-button.ant-btn:active {
+transform: translateY(0) scale(0.98);
+}
+
+.vote-action-x.ant-btn {
+background: rgba(255, 77, 79, 0.12) !important;
+border-color: rgba(255, 77, 79, 0.8) !important;
+color: #ff7875 !important;
+}
+
+.vote-action-skip.ant-btn {
+background: rgba(212, 175, 55, 0.12) !important;
+border-color: var(--primary-gold) !important;
+color: var(--primary-gold) !important;
+}
+
+.vote-action-heart.ant-btn {
+background: rgba(82, 196, 26, 0.12) !important;
+border-color: #52c41a !important;
+color: #52c41a !important;
+}

@@ -224,13 +224,8 @@ const handleStartSession = async () => {
 
       await apiService.put(`/session/${sessionCode}/filters`, dto);
 
-      // IMPORTANT: just used for testing and debugging, remove when not needed anymore
-      const nextMovie = await apiService.get<unknown>(`/session/${sessionCode}/next`);
-      alert(`GET /session/${sessionCode}/next returned:\n${JSON.stringify(nextMovie, null, 2)}`);
-
       messageApi.success("Session started! Redirecting...");
-      // implement next to show game screen
-      // router.replace(`/session/${sessionCode}/...`);
+      router.replace(`/session/${sessionCode}/vote`);
     } catch (error) {
       console.error("Failed to start session:", error);
       messageApi.error("Failed to start session. Please check your filter settings and try again.");
