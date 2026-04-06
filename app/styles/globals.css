@@ -405,6 +405,18 @@ color: var(--background) !important;
   pointer-events: auto;
 }
 
+.session-code-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.copy-link-btn.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Home and History Page Styles */
 .home-container,
 .history-container {

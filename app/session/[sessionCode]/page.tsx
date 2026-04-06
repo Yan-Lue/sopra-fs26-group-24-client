@@ -1,7 +1,8 @@
 "use client";
 
 import { useApi } from "@/hooks/useApi";
-import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -24,6 +25,14 @@ interface FilterFormValues {
   releaseYear?: string;
 }
 
+interface SessionFilterPutDTO {
+  roundLimit: number;
+  genres?: string[];
+  minRating?: number;
+  releaseYear?: number;
+}
+
+// only in the frontend
 const timePerRoundOptions = [
   { value: 15, label: "15s" },
   { value: 30, label: "30s" },
@@ -60,6 +69,7 @@ const SessionWaitingRoom: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const routeSessionCode = params.sessionCode as string;
+
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
@@ -67,6 +77,10 @@ const SessionWaitingRoom: React.FC = () => {
   const [joinedUsers, setJoinedUsers] = useState(0);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showOptionalFilters, setShowOptionalFilters] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [isStarting, setIsStarting] = useState(false);
+  const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
+
   const [filterForm] = Form.useForm<FilterFormValues>();
 
   const roundOptions = useMemo(
@@ -118,9 +132,21 @@ const SessionWaitingRoom: React.FC = () => {
     void verifySessionAccess();
   }, [apiService, routeSessionCode, router]);
 
+  // persist filters so they dont get lost after refresh
+  useEffect(() => {
+    if (!sessionCode || !sessionFilters) return;
+    sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
+  }, [sessionCode, sessionFilters]);
+
+  // update DTO when new genres are selected or deselected, so that backend can build the session filters
   const handleGenreToggle = (genre: string, checked: boolean) => {
     setSelectedGenres((prev) => {
       const next = checked ? [...prev, genre] : prev.filter((g) => g !== genre);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, next);
+      setSessionFilters(dto);
+
       return next;
     });
   };
@@ -140,6 +166,16 @@ const SessionWaitingRoom: React.FC = () => {
     router.replace("/home");
   };
 
+  const handleCopySessionLink = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    messageApi.success("Session link copied.");
+  } catch (error) {
+    console.error("Failed to copy session link:", error);
+    messageApi.error("Could not copy link. Please copy from browser address bar.");
+  }
+};
+
   const parseStorageValue = <T,>(raw: string | null): T | null => {
   if (!raw) return null;
   try {
@@ -148,6 +184,60 @@ const SessionWaitingRoom: React.FC = () => {
     return raw as unknown as T;
   }
 };
+
+// take values from form, build DTO and send to backend to build session filters
+const buildSessionFilterDTO = (
+  values: FilterFormValues,
+  genres: string[],
+): SessionFilterPutDTO => {
+  const dto: SessionFilterPutDTO = {
+    roundLimit: values.rounds,
+  };
+
+  if (genres.length > 0) {
+    dto.genres = genres;
+  }
+
+  if (typeof values.minRating === "number" && values.minRating > 0) {
+    dto.minRating = values.minRating;
+  }
+
+  if (values.releaseYear && values.releaseYear !== "any") {
+    dto.releaseYear = Number(values.releaseYear);
+  }
+
+  return dto;
+};
+
+const handleStartSession = async () => {
+    if (!isHost || !sessionCode) return;
+
+    try {
+      setIsStarting(true);
+
+      await filterForm.validateFields(["rounds", "timePerRound"]);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, selectedGenres);
+
+      setSessionFilters(dto);
+
+      await apiService.put(`/session/${sessionCode}/filters`, dto);
+
+      // IMPORTANT: just used for testing and debugging, remove when not needed anymore
+      const nextMovie = await apiService.get<unknown>(`/session/${sessionCode}/next`);
+      alert(`GET /session/${sessionCode}/next returned:\n${JSON.stringify(nextMovie, null, 2)}`);
+
+      messageApi.success("Session started! Redirecting...");
+      // implement next to show game screen
+      // router.replace(`/session/${sessionCode}/...`);
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      messageApi.error("Failed to start session. Please check your filter settings and try again.");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -239,6 +329,7 @@ const SessionWaitingRoom: React.FC = () => {
 
   return (
     <div className="page-with-nav">
+      {contextHolder}
       <div className="session-layout">
         {isHost && (
           <Card className="play-card host-card session-side-card" title="Host Controls">
@@ -251,6 +342,10 @@ const SessionWaitingRoom: React.FC = () => {
                 timePerRound: 30,
                 minRating: 0,
                 releaseYear: "any",
+              }}
+              onValuesChange={(_, allValues) => {
+                const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres);
+                setSessionFilters(dto);
               }}
             >
               {mandatoryFilters}
@@ -276,7 +371,11 @@ const SessionWaitingRoom: React.FC = () => {
                 Ready to Start
               </Typography.Title>
 
-              <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
+              <div className="session-code-row">
+                <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
+                <Button size="small" type="default" className="copy-link-btn" icon={<CopyOutlined />} aria-label="Copy Session Link" onClick={handleCopySessionLink}>
+                </Button>
+              </div>
 
               <Typography.Text className="host-meta-line">
                 {joinedUsers} people have joined
@@ -294,10 +393,10 @@ const SessionWaitingRoom: React.FC = () => {
             <div className="waiting-room-actions">
               {isHost ? (
                 <>
-                  <Button className="start-session-btn" block onClick={() => console.log("Start session")}>
+                  <Button className="start-session-btn" block loading={isStarting} onClick={handleStartSession}>
                     Start Session
                   </Button>
-                  <Button className="end-session-btn" block onClick={() => console.log("End session")}>
+                  <Button className="end-session-btn" block onClick={handleLeave}>
                     End Session
                   </Button>
                 </>
