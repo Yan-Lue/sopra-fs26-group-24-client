@@ -1,5 +1,6 @@
 "use client";
 
+import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
@@ -59,6 +60,8 @@ const Play: React.FC = () => {
   const apiService = useApi();
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const [createForm] = Form.useForm<CreateSessionFormValues>();
+  const [joinForm] = Form.useForm<JoinSessionFormValues>();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -79,7 +82,9 @@ const Play: React.FC = () => {
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      messageApi.error("User ID not found. Please log in again.");
+      createForm.setFields([
+        { name: "sessionName", errors: ["Please log in again."] },
+      ]);
       return;
     }
 
@@ -97,7 +102,9 @@ const Play: React.FC = () => {
       const {sessionCode, hostId } = session;
 
       if (!sessionCode) {
-        messageApi.error("Failed to create session. Please try again.");
+        createForm.setFields([
+          { name: "sessionName", errors: ["Failed to create session. Please try again."] },
+        ]);
         return;
       }
 
@@ -112,7 +119,9 @@ const Play: React.FC = () => {
       router.push(`/session/${sessionCode}`);
     } catch (error) {
       console.error("Create session error:", error);
-      messageApi.error("Failed to create session. Please try again.");
+      createForm.setFields([
+        { name: "sessionName", errors: ["Failed to create session. Please try again."] },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -121,7 +130,9 @@ const Play: React.FC = () => {
   const handleJoinSession = async (values: JoinSessionFormValues) => {
   const trimmedCode = values.sessionCode.trim();
   if (!trimmedCode) {
-    messageApi.error("Please enter a session code.");
+    joinForm.setFields([
+        { name: "sessionCode", errors: ["Please enter a session code."] },
+      ]);
     return;
   }
 
@@ -151,8 +162,25 @@ const Play: React.FC = () => {
     messageApi.success("Session joined successfully!");
     router.push(`/session/${session.sessionCode}`);
   } catch (error) {
+    const err = error as { status?: number };
+
+    if (err.status === 404) {
+      joinForm.setFields([
+        {
+          name: "sessionCode",
+          errors: ["Session not found. Check the code and try again."],
+        },
+      ]);
+      return;
+    }
+
     console.error("Join session error:", error);
-    messageApi.error("Failed to join session. Please check the code and try again.");
+    joinForm.setFields([
+      {
+        name: "sessionCode",
+        errors: ["Failed to join session. Please try again."],
+      },
+    ]);
   }
 };
 
@@ -170,70 +198,73 @@ const Play: React.FC = () => {
   }
 
   return (
-    <>{contextHolder}
-    <div className="play-container">
-      <Card className="play-card" title="Create New Session">
-        <p className="play-description">{createSessionDescription}</p>
+    <div className="page-with-nav">
+      {contextHolder}
+      <Navbar />
+      <div className="play-container">
+        <Card className="play-card" title="Create New Session">
+          <p className="play-description">{createSessionDescription}</p>
 
-        <Form<CreateSessionFormValues>
-          layout="vertical"
-          onFinish={handleCreateSession}
-        >
-          <Form.Item
-            style={{ marginTop: 24 }}
-            name="sessionName"
-            label="Session Name"
-            rules={[{ required: true, message: "Please input a session name!" }]}
+          <Form<CreateSessionFormValues>
+            form={createForm}
+            layout="vertical"
+            onFinish={handleCreateSession}
           >
-            <Input placeholder="Enter a Session name" />
-          </Form.Item>
+            <Form.Item
+              style={{ marginTop: 24 }}
+              name="sessionName"
+              label="Session Name"
+              rules={[{ required: true, message: "Please input a session name!" }]}
+            >
+              <Input placeholder="Enter a Session name" />
+            </Form.Item>
 
-          <Form.Item
-            name="maxPlayers"
-            label="Number of Players"
-            rules={[{ required: true, message: "Please input the number of players!" }]}
-          >
+            <Form.Item
+              name="maxPlayers"
+              label="Number of Players"
+              rules={[{ required: true, message: "Please input the number of players!" }]}
+            >
 
-            <Select
-              placeholder={
-                <span style={{ color: "var(--accent)", opacity: 1 }}>
-                  Select the number of players...
-                </span>
-              }
-              options={playerOptions}
-            />
-          </Form.Item>
+              <Select
+                placeholder={
+                  <span style={{ color: "var(--accent)", opacity: 1 }}>
+                    Select the number of players...
+                  </span>
+                }
+                options={playerOptions}
+              />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="play-button">
-              Create Session
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" className="play-button">
+                Create Session
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
 
-      <Card className="play-card" title="Join Session">
-        <p className="play-description">{joinSessionDescription}</p>
+        <Card className="play-card" title="Join Session">
+          <p className="play-description">{joinSessionDescription}</p>
 
-        <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
-          <Form.Item
-            style={{ marginTop: 24 }}
-            name="sessionCode"
-            label="Session Code"
-            rules={[{ required: true, message: "Please input the session code!" }]}
-          >
-            <Input placeholder="Enter Session Code" />
-          </Form.Item>
+          <Form<JoinSessionFormValues> form={joinForm} layout="vertical" onFinish={handleJoinSession}>
+            <Form.Item
+              style={{ marginTop: 24 }}
+              name="sessionCode"
+              label="Session Code"
+              rules={[{ required: true, message: "Please input the session code!" }]}
+            >
+              <Input placeholder="Enter Session Code" />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="play-button">
-              Join Session
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" className="play-button">
+                Join Session
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </div>
     </div>
-    </>
   );
 };
 

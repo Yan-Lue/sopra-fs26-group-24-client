@@ -149,13 +149,6 @@ a {
   justify-content: center;
 }
 
-.host-card .ant-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--text) !important;
-}
-
 .host-section-title.ant-typography {
   margin-bottom: 16px !important;
   color: var(--text) !important;
@@ -196,6 +189,18 @@ a {
 .participant-waiting-text.ant-typography {
   color: var(--text) !important;
   font-size: 18px !important;
+  margin-bottom: 24px !important;
+}
+
+.session-layout {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 28px 32px 36px;
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .session-layout .session-side-card .ant-card-head-title,
@@ -221,67 +226,184 @@ a {
   font-size: 15px;
 }
 
-.session-layout {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px;
-  display: flex;
-  gap: 24px;
-  align-items: stretch;
-  justify-content: center;
-}
-
 .session-side-card {
-  flex: 0 1 340px;
+  flex: 0 1 320px;
+  width: 100%;
   max-width: 340px;
+  align-self: stretch;
+  position: static;
+  top: auto;
 }
 
 .session-main-card {
-  flex: 0 1 500px;
-  max-width: 620px;
+  flex: 1 1 700px;
+  width: 100%;
+  min-width: 0;
+  max-width: 560px;
+  max-height: 620px;
 }
 
-.session-side-card .ant-card-body,
+.session-side-card .ant-card-body {
+padding: 18px 18px 16px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
 .session-main-card .ant-card-body {
-  padding: 16px;
+padding: 20px 24px;
+min-height: 520px;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
 }
 
 .waiting-room-form {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .waiting-room-form .ant-form-item {
-  margin-bottom: 4px !important;
+margin-bottom: 8px !important;
 }
 
-.waiting-room-form .ant-typography {
-  color: var(--text) !important;
-  font-size: 16px;
+.waiting-room-center {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
 }
 
+.waiting-room-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.start-session-btn.ant-btn {
+background-color: var(--primary-gold) !important;
+border-color: var(--primary-gold) !important;
+color: var(--background) !important;
+min-width: 190px;
+align-self: center;
+font-weight: 600;
+max-width: 60%;
+}
+
+.end-session-btn.ant-btn,
 .leave-session-btn.ant-btn {
-  margin-top: 12px;
-  align-self: center;
-  min-width: 180px;
+background-color: rgba(255, 77, 79, 0.8) !important;
+border-color: rgba(255, 77, 79, 0.8) !important;
+color: var(--background) !important;
+min-width: 190px;
+align-self: center;
+font-weight: 600;
+max-width: 60%;
 }
 
-@media (max-width: 980px) {
-  .session-layout {
-    flex-direction: column;
-    padding: 16px;
-  }
-
-  .session-side-card,
-  .session-main-card {
-    flex: 1 1 auto;
-    max-width: none;
-    width: 100%;
-  }
+.session-main-card .participant-settings,
+.session-main-card .host-session-meta {
+width: 100%;
+max-width: 640px;
+margin-left: auto;
+margin-right: auto;
 }
 
+.session-main-card .participant-waiting-text.ant-typography {
+display: block;
+text-align: center;
+margin-top: 22px;
+}
 
+.session-main-card .ant-spin {
+margin: 42px auto 20px;
+display: block;
+}
+
+.session-main-card .host-loading-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 180px;
+}
+
+.session-main-card .ant-tag-checkable {
+border: 1px solid var(--secondary) !important;
+color: var(--text) !important;
+background: rgba(255, 255, 255, 0.02) !important;
+border-radius: 999px;
+padding: 6px 11px;
+}
+
+.session-main-card .ant-tag-checkable-checked {
+background: var(--primary-gold) !important;
+border-color: var(--primary-gold) !important;
+color: var(--background) !important;
+}
+
+.session-filter-form .ant-form-item {
+  margin-bottom: 10px;
+}
+
+.session-filter-group-title.ant-typography {
+  margin-bottom: 10px !important;
+  color: var(--text) !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+}
+
+.session-filter-divider.ant-divider {
+  border-color: var(--secondary) !important;
+  margin: 10px 0 14px !important;
+}
+
+.genre-chip.ant-tag {
+  border: 1px solid var(--secondary) !important;
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 999px;
+  padding: 6px 11px;
+}
+
+.genre-chip.active.ant-tag {
+  background: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
+}
+
+.optional-filters-toggle.ant-btn {
+  margin: 10px 0 6px;
+  background: transparent !important;
+  border-color: var(--secondary) !important;
+  color: var(--text) !important;
+}
+
+.optional-filters-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    max-height 280ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
+  pointer-events: none;
+}
+
+.optional-filters-panel.open {
+  max-height: 720px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 
 /* Home and History Page Styles */
 .home-container,
