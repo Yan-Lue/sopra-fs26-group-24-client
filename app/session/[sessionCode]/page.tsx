@@ -12,6 +12,7 @@ interface SessionResponse {
   sessionCode: string;
   sessionToken: string;
   hostId: number;
+  joinedUsers: number;
 }
 
 const genreOptions = [
@@ -37,9 +38,13 @@ const SessionWaitingRoom: React.FC = () => {
   const [joinedUsers, setJoinedUsers] = useState(0);
 
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+
     const validateSession = async (): Promise<SessionResponse> => {
       const session = await apiService.get<SessionResponse>(`/session/${routeSessionCode}`);
       setIsValid(true);
+      setSessionCode(session.sessionCode);
+      setJoinedUsers(session.joinedUsers);
       return session;
     };
 
@@ -54,22 +59,18 @@ const SessionWaitingRoom: React.FC = () => {
       }
 
       const parsedUserId = Number(userId);
-      //const parsedSessionId = Number(sessionId);
-      
-    /* possible Check if userId and sessionId are valid numbers before making the API call 
-      - NaN checks if not a number
-      if (Number.isNaN(parsedUserId) || Number.isNaN(parsedSessionId)) {
-        setErrorMessage("Invalid user or session id.");
-        setIsLoading(false);
-        return;
-      }
-      */
 
       try {
         const session = await validateSession();
-        setSessionCode(session.sessionCode);
-        setJoinedUsers(1);
         setIsHost(session.hostId === parsedUserId);
+
+        intervalId = setInterval(async () => {
+          try {
+            await validateSession();
+          } catch (e) {
+            // Silently ignore poll errors for now
+          }
+        }, 3000);
       } catch {
         alert("Failed to verify host session access. Please try again if you are the host.");
         router.replace("/play");
@@ -79,6 +80,10 @@ const SessionWaitingRoom: React.FC = () => {
     };
 
     void verifyHostAccess();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [routeSessionCode, apiService, router]);
 
   const handleLeave = () => {
