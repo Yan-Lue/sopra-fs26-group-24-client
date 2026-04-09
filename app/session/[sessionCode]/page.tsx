@@ -1,11 +1,15 @@
 "use client";
 
 import { useApi } from "@/hooks/useApi";
-import { Button, Card, Form, InputNumber, Select, Space, Spin, Tag, Typography } from "antd";
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { CopyOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
-//const { Title, Paragraph } = Typography;
+interface SessionPutDTO {
+  id: number;
+  token: string;
+}
 
 interface SessionResponse {
   sessionId: number;
@@ -14,15 +18,50 @@ interface SessionResponse {
   hostId: number;
 }
 
+interface FilterFormValues {
+  rounds: number;
+  timePerRound: number;
+  minRating?: number;
+  releaseYear?: string;
+}
+
+interface SessionFilterPutDTO {
+  roundLimit: number;
+  genres?: string[];
+  minRating?: number;
+  releaseYear?: number;
+}
+
+// only in the frontend
+const timePerRoundOptions = [
+  { value: 15, label: "15s" },
+  { value: 30, label: "30s" },
+  { value: 45, label: "45s" },
+  { value: 60, label: "1min" },
+  { value: 90, label: "1min 30s" },
+  { value: 120, label: "2min" },
+];
+
 const genreOptions = [
   "Action",
-  "Comedy",
-  "Drama",
-  "Horror",
-  "Sci-Fi",
-  "Romance",
-  "Thriller",
   "Adventure",
+  "Animation",
+  "Comedy",
+  "Crime",
+  "Documentary",
+  "Drama",
+  "Family",
+  "Fantasy",
+  "History",
+  "Horror",
+  "Music",
+  "Mystery",
+  "Romance",
+  "Science Fiction",
+  "TV Movie",
+  "Thriller",
+  "War",
+  "Western",
 ];
 
 const SessionWaitingRoom: React.FC = () => {
@@ -30,65 +69,170 @@ const SessionWaitingRoom: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const routeSessionCode = params.sessionCode as string;
+
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isHost, setIsHost] = useState(false);
   const [sessionCode, setSessionCode] = useState<string | undefined>(routeSessionCode);
   const [joinedUsers, setJoinedUsers] = useState(0);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [showOptionalFilters, setShowOptionalFilters] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [isStarting, setIsStarting] = useState(false);
+  const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
+
+  const [filterForm] = Form.useForm<FilterFormValues>();
+
+  const roundOptions = useMemo(
+    () =>
+      Array.from({ length: 13 }, (_, i) => {
+        const value = i + 3;
+        return { value, label: `${value}` }  ;
+      }),
+    [],
+  );
 
   useEffect(() => {
-    const validateSession = async (): Promise<SessionResponse> => {
-      const session = await apiService.get<SessionResponse>(`/session/${routeSessionCode}`);
-      setIsValid(true);
-      return session;
-    };
+    const verifySessionAccess = async () => {
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      const userIdRaw = parseStorageValue<string | number>(localStorage.getItem("userId"));
+      const parsedUserId = Number(userIdRaw);
 
-    const verifyHostAccess = async () => {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("userId");
-
-      if (!token || !userId || !routeSessionCode) {
+      if (!token || Number.isNaN(parsedUserId) || !routeSessionCode) {
         sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
         router.replace("/login");
         return;
       }
 
-      const parsedUserId = Number(userId);
-      //const parsedSessionId = Number(sessionId);
-      
-    /* possible Check if userId and sessionId are valid numbers before making the API call 
-      - NaN checks if not a number
-      if (Number.isNaN(parsedUserId) || Number.isNaN(parsedSessionId)) {
-        setErrorMessage("Invalid user or session id.");
-        setIsLoading(false);
-        return;
-      }
-      */
+      const payload: SessionPutDTO = {
+        id: parsedUserId,
+        token,
+      };
 
       try {
-        const session = await validateSession();
+        const session = await apiService.put<SessionResponse>(`/session/${routeSessionCode}`, payload);
+
         setSessionCode(session.sessionCode);
-        setJoinedUsers(1);
         setIsHost(session.hostId === parsedUserId);
-      } catch {
-        alert("Failed to verify host session access. Please try again if you are the host.");
+        // Local hint only (not global)
+        const key = `joinedUsers:${session.sessionCode}`;
+        const hinted = Number(sessionStorage.getItem(key) ?? "1");
+        setJoinedUsers(hinted);
+
+        setIsValid(true);
+      } catch (error) {
+        console.error("Failed to verify session access:", error);
+        alert("Failed to verify host session access.");
         router.replace("/play");
       } finally {
         setIsLoading(false);
       }
     };
 
-    void verifyHostAccess();
-  }, [routeSessionCode, apiService, router]);
+    void verifySessionAccess();
+  }, [apiService, routeSessionCode, router]);
 
-  const handleLeave = () => {
-    router.push("/home");
+  // persist filters so they dont get lost after refresh
+  useEffect(() => {
+    if (!sessionCode || !sessionFilters) return;
+    sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
+  }, [sessionCode, sessionFilters]);
+
+  // update DTO when new genres are selected or deselected, so that backend can build the session filters
+  const handleGenreToggle = (genre: string, checked: boolean) => {
+    setSelectedGenres((prev) => {
+      const next = checked ? [...prev, genre] : prev.filter((g) => g !== genre);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, next);
+      setSessionFilters(dto);
+
+      return next;
+    });
   };
 
-  /* if (!isValid) {
-    return null;
+  const handleLeave = () => {
+    if (sessionCode) {
+      const key = `joinedUsers:${sessionCode}`;
+      const current = Number(sessionStorage.getItem(key) ?? "1");
+      const next = Math.max(current - 1, 0);
+
+      if (next === 0) {
+        sessionStorage.removeItem(key);
+      } else {
+        sessionStorage.setItem(key, String(next));
+      }
+    }
+    router.replace("/home");
+  };
+
+  const handleCopySessionLink = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    messageApi.success("Session link copied.");
+  } catch (error) {
+    console.error("Failed to copy session link:", error);
+    messageApi.error("Could not copy link. Please copy from browser address bar.");
   }
-    */
+};
+
+  const parseStorageValue = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as unknown as T;
+  }
+};
+
+// take values from form, build DTO and send to backend to build session filters
+const buildSessionFilterDTO = (
+  values: FilterFormValues,
+  genres: string[],
+): SessionFilterPutDTO => {
+  const dto: SessionFilterPutDTO = {
+    roundLimit: values.rounds,
+  };
+
+  if (genres.length > 0) {
+    dto.genres = genres;
+  }
+
+  if (typeof values.minRating === "number" && values.minRating > 0) {
+    dto.minRating = values.minRating;
+  }
+
+  if (values.releaseYear && values.releaseYear !== "any") {
+    dto.releaseYear = Number(values.releaseYear);
+  }
+
+  return dto;
+};
+
+const handleStartSession = async () => {
+    if (!isHost || !sessionCode) return;
+
+    try {
+      setIsStarting(true);
+
+      await filterForm.validateFields(["rounds", "timePerRound"]);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, selectedGenres);
+
+      setSessionFilters(dto);
+
+      await apiService.put(`/session/${sessionCode}/filters`, dto);
+
+      messageApi.success("Session started! Redirecting...");
+      router.replace(`/session/${sessionCode}/vote`);
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      messageApi.error("Failed to start session. Please check your filter settings and try again.");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -105,106 +249,160 @@ const SessionWaitingRoom: React.FC = () => {
     return null;
   }
 
+  const mandatoryFilters = (
+    <>
+      <Typography.Title level={4} className="session-filter-group-title">
+        Mandatory Filters
+      </Typography.Title>
+
+      <Form.Item
+        label="Number of Rounds"
+        name="rounds"
+        rules={[{ required: true, message: "Please select number of rounds." }]}
+      >
+        <Select options={roundOptions} disabled={!isHost} />
+      </Form.Item>
+
+      <Form.Item
+        label="Time Per Round"
+        name="timePerRound"
+        rules={[{ required: true, message: "Please select time per round." }]}
+      >
+        <Select options={timePerRoundOptions} disabled={!isHost} />
+      </Form.Item>
+    </>
+  );
+
+  const optionalFilters = (
+    <div className={`optional-filters-panel ${showOptionalFilters ? "open" : ""}`}>
+      <Divider className="session-filter-divider" />
+
+      <Typography.Title level={4} className="session-filter-group-title">
+        Optional Filters
+      </Typography.Title>
+
+      <Form.Item label="Genre">
+        <Space size={[8, 8]} wrap>
+          {genreOptions.map((genre) => (
+            <Tag.CheckableTag
+              key={genre}
+              checked={selectedGenres.includes(genre)}
+              onChange={(checked) => handleGenreToggle(genre, checked)}
+              className={selectedGenres.includes(genre) ? "genre-chip active" : "genre-chip"}
+            >
+              {genre}
+            </Tag.CheckableTag>
+          ))}
+        </Space>
+      </Form.Item>
+
+      <Form.Item label="Minimum Rating" name="minRating">
+        <Select
+          disabled={!isHost}
+          options={[
+            { value: 0, label: "Any rating" },
+            { value: 6, label: "6+" },
+            { value: 7, label: "7+" },
+            { value: 8, label: "8+" },
+          ]}
+        />
+      </Form.Item>
+
+      <Form.Item label="Release Year" name="releaseYear">
+        <Select
+          disabled={!isHost}
+          options={[
+            { value: "any", label: "Any year" },
+            { value: "2020", label: "2020+" },
+            { value: "2010", label: "2010+" },
+            { value: "2000", label: "2000+" },
+          ]}
+        />
+      </Form.Item>
+    </div>
+  );
+
   return (
     <div className="page-with-nav">
+      {contextHolder}
       <div className="session-layout">
-        <Card className="play-card participant-card session-side-card" title="Waiting Room">
-            <Form layout="vertical" className="waiting-room-form">
-              <Typography.Title level={3} className="host-section-title">Waiting Room</Typography.Title>
-              {/* TODO: implement dynamic joined users count and check colors and fonts!! */}
-                <Typography.Text className="host-meta-line">Joined Users: {joinedUsers}</Typography.Text>
+        {isHost && (
+          <Card className="play-card host-card session-side-card" title="Host Controls">
+            <Form
+              form={filterForm}
+              layout="vertical"
+              className="session-filter-form"
+              initialValues={{
+                rounds: 5,
+                timePerRound: 30,
+                minRating: 0,
+                releaseYear: "any",
+              }}
+              onValuesChange={(_, allValues) => {
+                const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres);
+                setSessionFilters(dto);
+              }}
+            >
+              {mandatoryFilters}
 
-                <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
-                
-                <Typography.Text className="host-meta-line">Waiting for the game to start...</Typography.Text>
-              <Button type="primary" onClick={handleLeave} className="leave-session-btn">
-                Leave Session
+              <Button
+                type="default"
+                block
+                onClick={() => setShowOptionalFilters((prev) => !prev)}
+                className="optional-filters-toggle"
+              >
+                {showOptionalFilters ? "Hide Optional Filters" : "Show Optional Filters"}
               </Button>
+
+              {optionalFilters}
             </Form>
-        </Card>
-        {isHost ? (
-                <Card className="play-card host-card session-main-card" title="Host Controls">
-                  <Form layout="vertical">
-                    <Typography.Title level={3} className="host-section-title">Session Filters</Typography.Title>
-      
-                    <Form.Item label="Genre (optional)">
-                      <Space size={[8, 8]} wrap>
-                        {genreOptions.map((genre) => (
-                          <Tag key={genre}>{genre}</Tag>
-                        ))}
-                      </Space>
-                    </Form.Item>
-      
-                    <Form.Item label="Minimum Rating (optional)" 
-                     name="minRating">
-                      <Select
-                        placeholder="Any rating"
-                        options={[
-                          { value: 0, label: "Any rating" },
-                          { value: 6, label: "6+" },
-                          { value: 7, label: "7+" },
-                          { value: 8, label: "8+" },
-                        ]}
-                      />
-                    </Form.Item>
-      
-                    <Form.Item label="Release Year (optional)" name="releaseYear">
-                      <Select
-                        placeholder="Any year"
-                        options={[
-                          { value: "any", label: "Any year" },
-                          { value: "2020", label: "2020+" },
-                          { value: "2010", label: "2010+" },
-                          { value: "2000", label: "2000+" },
-                        ]}
-                      />
-                    </Form.Item>
-      
-                    <Form.Item
-                      label="Number of Rounds"
-                      name="rounds"
-                      rules={[{ required: true, message: "Number of rounds is required." }]}
-                    >
-                      <InputNumber min={1} max={20} style={{ width: "100%" }} />
-                    </Form.Item>
-                  </Form>
-      
-                  <div className="host-session-meta">
-                    <Typography.Text className="host-meta-line">Session Code: {sessionCode ?? "-"}</Typography.Text>
-                    <Typography.Text className="host-meta-line">{joinedUsers} people have joined</Typography.Text>
-                    <Button type="primary" block onClick={() => console.log("Start session")}>
-                      Start Session
-                    </Button>
-                    {/* TODO: implement end session functionality */}
-                    <Button block onClick={() => console.log("End session")}>
-                      End Session
-                      -- Implement End-functionality
-                    </Button>
-                  </div>
-                </Card>
+          </Card>
+        )}
+
+        <Card className="play-card participant-card session-main-card" title="Waiting Room">
+          <div className="waiting-room-form">
+            <div className="waiting-room-center">
+              <Typography.Title level={3} className="host-section-title">
+                Ready to Start
+              </Typography.Title>
+
+              <div className="session-code-row">
+                <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
+                <Button size="small" type="default" className="copy-link-btn" icon={<CopyOutlined />} aria-label="Copy Session Link" onClick={handleCopySessionLink}>
+                </Button>
+              </div>
+
+              <Typography.Text className="host-meta-line">
+                {joinedUsers} people have joined
+              </Typography.Text>
+
+              <div className="host-loading-wrap">
+                <Spin size="large" />
+              </div>
+
+              <Typography.Text className="participant-waiting-text">
+                Waiting for {isHost ? "you" : "the host"} to start the session...
+              </Typography.Text>
+            </div>
+
+            <div className="waiting-room-actions">
+              {isHost ? (
+                <>
+                  <Button className="start-session-btn" block loading={isStarting} onClick={handleStartSession}>
+                    Start Session
+                  </Button>
+                  <Button className="end-session-btn" block onClick={handleLeave}>
+                    End Session
+                  </Button>
+                </>
               ) : (
-                <Card className="play-card host-card session-main-card" title="Waiting Room">
-                  <Typography.Title level={3} className="host-section-title">Session Filters</Typography.Title>
-                  <Space size={[8, 8]} wrap className="participant-genre-wrap">
-                    {["Action", "Comedy", "Sci-Fi"].map((genre) => (
-                      <Tag key={genre}>{genre}</Tag>
-                    ))}
-                  </Space>
-      
-                  <div className="participant-settings">
-                    <Typography.Text className="host-meta-line">Minimum Rating: Any rating</Typography.Text>
-                    <Typography.Text className="host-meta-line">Release Year: Any year</Typography.Text>
-                    <Typography.Text className="host-meta-line">Number of Rounds: 5</Typography.Text>
-                    <Typography.Text className="host-meta-line">Time per Round: 30 seconds</Typography.Text>
-                  </div>
-      
-                  <div className="host-session-meta">
-                    <Typography.Text className="host-meta-line">Session Code: {sessionCode ?? "-"}</Typography.Text>
-                    <Typography.Text className="host-meta-line">{joinedUsers} people have joined</Typography.Text>
-                    <Typography.Text className="participant-waiting-text">Waiting for host to start the session...</Typography.Text>
-                  </div>
-                </Card>
+                <Button className="leave-session-btn" onClick={handleLeave}>
+                  Leave Session
+                </Button>
               )}
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

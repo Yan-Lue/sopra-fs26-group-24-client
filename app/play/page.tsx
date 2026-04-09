@@ -2,7 +2,6 @@
 
 import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
-import { getApiDomain } from "@/utils/domain";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,6 +34,18 @@ interface SessionResponse {
   hostId: number;
 }
 
+interface SessionPutDTO {
+  id: number;
+  token: string;
+}
+
+interface JoinSessionResponse {
+  sessionCode: string;
+  sessionId: number;
+  sessionToken: string;
+  hostId: number;
+}
+
 // Generate player options for the Select component
 const playerOptions = Array.from({ length: 16 }, (_, index) => ({
   value: index + 1,
@@ -48,7 +59,9 @@ const Play: React.FC = () => {
   const router = useRouter();
   const apiService = useApi();
   const [loading, setLoading] = useState(false);
-
+  const [messageApi, contextHolder] = message.useMessage();
+  const [createForm] = Form.useForm<CreateSessionFormValues>();
+  const [joinForm] = Form.useForm<JoinSessionFormValues>();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -69,7 +82,9 @@ const Play: React.FC = () => {
 
     const userId = localStorage.getItem("userId");
     if (!userId) {
-      message.error("User ID not found. Please log in again.");
+      createForm.setFields([
+        { name: "sessionName", errors: ["Please log in again."] },
+      ]);
       return;
     }
 
@@ -87,7 +102,9 @@ const Play: React.FC = () => {
       const {sessionCode, hostId } = session;
 
       if (!sessionCode) {
-        message.error("Failed to create session. Please try again.");
+        createForm.setFields([
+          { name: "sessionName", errors: ["Failed to create session. Please try again."] },
+        ]);
         return;
       }
 
@@ -102,42 +119,79 @@ const Play: React.FC = () => {
       router.push(`/session/${sessionCode}`);
     } catch (error) {
       console.error("Create session error:", error);
-      message.error("Failed to create session. Please try again.");
+      createForm.setFields([
+        { name: "sessionName", errors: ["Failed to create session. Please try again."] },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleJoinSession = async (values: JoinSessionFormValues) => {
-    const sessioncode = values.sessionCode.trim();
-    console.log("Join session values:", values);
+  const trimmedCode = values.sessionCode.trim();
+  if (!trimmedCode) {
+    joinForm.setFields([
+        { name: "sessionCode", errors: ["Please enter a session code."] },
+      ]);
+    return;
+  }
 
-    //check if session code is empty
-    if (!sessioncode) {
-      message.error("Please enter a session code.");
+  const token = parseStorageValue<string>(localStorage.getItem("token"));
+  const userIdRaw = parseStorageValue<string | number>(localStorage.getItem("userId"));
+  const userId = Number(userIdRaw);
+
+  if (!token || Number.isNaN(userId)) {
+    sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
+    router.replace("/login");
+    return;
+  }
+
+  const payload: SessionPutDTO = {
+    id: userId,
+    token,
+  };
+
+  try {
+    const session = await apiService.put<JoinSessionResponse>(`/session/${trimmedCode}`, payload);
+
+    // Optional local hint only (not global), implement in backend for full functionality
+    const key = `joinedUsers:${session.sessionCode}`;
+    const current = Number(sessionStorage.getItem(key) ?? "1");
+    sessionStorage.setItem(key, String(current + 1));
+
+    messageApi.success("Session joined successfully!");
+    router.push(`/session/${session.sessionCode}`);
+  } catch (error) {
+    const err = error as { status?: number };
+
+    if (err.status === 404) {
+      joinForm.setFields([
+        {
+          name: "sessionCode",
+          errors: ["Session not found. Check the code and try again."],
+        },
+      ]);
       return;
     }
 
+    console.error("Join session error:", error);
+    joinForm.setFields([
+      {
+        name: "sessionCode",
+        errors: ["Failed to join session. Please try again."],
+      },
+    ]);
+  }
+};
 
-    try {
-      const apiDomain = getApiDomain();
-      const result = await fetch(`${apiDomain}/session/${sessioncode}`, {
-
-        method: "GET",
-      });
-
-      if (!result.ok) {
-        sessionStorage.setItem("redirectError", "Session not found. Please check the session code and try again.");
-        router.push("/home");
-        return;
-      }
-
-      message.success("Session found! Joining session...");
-      router.push(`/session/${sessioncode}`);
-    } catch (error) {
-      message.error("Server can not be reached. Please try again later.");
-    }
-  };
+  const parseStorageValue = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as unknown as T;
+  }
+};
 
   if (!isAuthorized) {
     return null;
@@ -145,13 +199,14 @@ const Play: React.FC = () => {
 
   return (
     <div className="page-with-nav">
+      {contextHolder}
       <Navbar />
-
       <div className="play-container">
         <Card className="play-card" title="Create New Session">
           <p className="play-description">{createSessionDescription}</p>
 
           <Form<CreateSessionFormValues>
+            form={createForm}
             layout="vertical"
             onFinish={handleCreateSession}
           >
@@ -191,7 +246,7 @@ const Play: React.FC = () => {
         <Card className="play-card" title="Join Session">
           <p className="play-description">{joinSessionDescription}</p>
 
-          <Form<JoinSessionFormValues> layout="vertical" onFinish={handleJoinSession}>
+          <Form<JoinSessionFormValues> form={joinForm} layout="vertical" onFinish={handleJoinSession}>
             <Form.Item
               style={{ marginTop: 24 }}
               name="sessionCode"
