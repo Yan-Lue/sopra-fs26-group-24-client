@@ -8,6 +8,8 @@ import { useParams, useRouter } from "next/navigation";
 import SockJS from "sockjs-client";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+//useRef allows us to keep track of whether we're currently advancing to the next movie, preventing multiple simultaneous advances if the timer triggers while an advance is already in progress.
+
 /** 
 interface SessionPutDTO {
   id: number;
