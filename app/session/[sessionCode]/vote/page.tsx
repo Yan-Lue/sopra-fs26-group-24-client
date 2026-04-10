@@ -6,7 +6,7 @@ import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import SockJS from "sockjs-client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /** 
 interface SessionPutDTO {
@@ -52,7 +52,9 @@ const VotePage: React.FC = () => {
   const [movie, setMovie] = useState<MovieGetDTO | null>(null);
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [votedMovieIds, setVotedMovieIds] = useState<number[]>([]);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [messageApi, contextHolder] = message.useMessage();
+  const isAdvancingRef = useRef(false);
 
   const parseStorageValue = <T,>(raw: string | null): T | null => {
     if (!raw) return null;
@@ -100,10 +102,7 @@ const VotePage: React.FC = () => {
       );
       if (cachedMovie) {
         setMovie(cachedMovie);
-        setIsLoading(false);
       }
-
-      setIsAuthorized(true);
 
       const client = new Client({
         webSocketFactory: () => new SockJS(getSocketEndpoint()),
@@ -116,7 +115,6 @@ const VotePage: React.FC = () => {
               try {
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
-                setIsLoading(false);
                 sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
@@ -132,9 +130,8 @@ const VotePage: React.FC = () => {
       });
 
       client.activate();
-      if (!cachedMovie) {
-        setIsLoading(true);
-      }
+      setIsAuthorized(true);
+      setIsLoading(false);
 
       return client;
     };
@@ -150,6 +147,60 @@ const VotePage: React.FC = () => {
       }
     };
   }, [routeSessionCode, router]);
+
+  // Auto-advance to next movie after timePerRound seconds
+  useEffect(() => {
+    if (!movie || isLoading) return;
+
+    const timePerRoundRaw = sessionStorage.getItem(`timePerRound:${routeSessionCode}`);
+    const timePerRound = timePerRoundRaw ? Number(timePerRoundRaw) : null;
+
+    if (!timePerRound || timePerRound <= 0) return;
+
+    setTimeRemaining(timePerRound);
+    
+    //manual countdown ;), possible to display remaining time to users etc...
+    const countdownInterval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          void advanceToNextMovie();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, [movie, isLoading, routeSessionCode, apiService, messageApi]);
+
+  const advanceToNextMovie = async () => {
+    if (isAdvancingRef.current) {
+      return;
+    }
+
+    isAdvancingRef.current = true;
+
+    try {
+      const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
+      setMovie(nextMovie);
+      sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+    } catch (error) {
+      /** possible to redirect via error
+       
+      const apiError = error as ApplicationError;
+      
+      if (apiError?.status === 409) {
+        router.replace(`/session/${routeSessionCode}/results`);
+        return;
+      }
+        */
+      console.error("Failed to fetch next movie:", error);
+      messageApi.error("Failed to load next movie.");
+    } finally {
+      isAdvancingRef.current = false;
+    }
+  };
 
   const handleVoteClick = async (vote: "x" | "skip" | "heart") => {
     //first check if movie data is loaded and if a vote submission is already in progress
@@ -232,8 +283,25 @@ const VotePage: React.FC = () => {
         <Card className="play-card vote-card">
 
           {!movie ? (
-            <div className="host-loading-wrap" style={{ minHeight: 380 }}>
+            <div className="host-loading-wrap vote-loading-wrap">
               <Spin size="large" />
+            </div>
+          ) : isWaitingForNextMovie ? (
+            <div className="host-loading-wrap vote-waiting-wrap">
+              <Space direction="vertical" size={12} className="vote-waiting-stack">
+                <Spin size="large" />
+                <Typography.Title level={3} className="vote-waiting-title">
+                  Waiting for other players...
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  Your vote is saved.
+                </Typography.Text>
+                {timeRemaining > 0 && (
+                  <Typography.Text strong>
+                    Next movie in {timeRemaining} seconds
+                  </Typography.Text>
+                )}
+              </Space>
             </div>
           ) : (
             <div className="vote-screen">
@@ -252,18 +320,18 @@ const VotePage: React.FC = () => {
               </div>
 
               <div className="vote-info">
-                <Typography.Title level={2} style={{ marginBottom: 8 }}>
+                <Typography.Title level={2} className="vote-title">
                   {movie.title}
                 </Typography.Title>
 
-                <Space size={[8, 8]} wrap style={{ marginBottom: 16 }}>
+                <Space size={[8, 8]} wrap className="vote-meta-row">
                   <Tag color="gold">Rating: {movie.rating?.toFixed(1) ?? "N/A"}</Tag>
                   <Tag color="blue">
                     {movie.releaseDate ? movie.releaseDate.slice(0, 4) : "Unknown year"}
                   </Tag>
                 </Space>
 
-                <Space size={[8, 8]} wrap style={{ marginBottom: 16 }}>
+                <Space size={[8, 8]} wrap className="vote-meta-row">
                   {movie.genres?.map((genre) => (
                     <Tag key={genre}>{genre}</Tag>
                   ))}
@@ -295,11 +363,6 @@ const VotePage: React.FC = () => {
                   <>
                     <Spin size="small" />
                     <Typography.Text>Submitting your vote...</Typography.Text>
-                  </>
-                ) : isWaitingForNextMovie ? (
-                  <>
-                    <Spin size="small" />
-                    <Typography.Text>  Vote saved. Waiting for the next movie...</Typography.Text>
                   </>
                 ) : null}
               </div>

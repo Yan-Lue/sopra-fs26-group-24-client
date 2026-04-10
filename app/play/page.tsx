@@ -116,6 +116,11 @@ const Play: React.FC = () => {
 
       localStorage.setItem("hostId", hostId.toString());
 
+      // Mark the creator as already joined so the waiting room does not try to
+      // register the host again and hit the session capacity check.
+      sessionStorage.setItem(`joinedSession:${sessionCode}`, `${hostId}:${localStorage.getItem("token") ?? ""}`);
+      sessionStorage.setItem(`joinedUsers:${sessionCode}`, "1");
+
       router.push(`/session/${sessionCode}`);
     } catch (error) {
       console.error("Create session error:", error);

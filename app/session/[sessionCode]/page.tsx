@@ -132,6 +132,22 @@ const SessionWaitingRoom: React.FC = () => {
         return;
       }
 
+      const storedHostId = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+      const storedSessionCode = localStorage.getItem("sessionCode");
+      if (
+        storedSessionCode === routeSessionCode &&
+        storedHostId !== null &&
+        Number(storedHostId) === parsedUserId
+      ) {
+        sessionStorage.setItem(joinedSessionKey, `${parsedUserId}:${token}`);
+        setSessionCode(routeSessionCode);
+        setIsHost(true);
+        setJoinedUsers(1);
+        setIsValid(true);
+        setIsLoading(false);
+        return;
+      }
+
       const payload: SessionPutDTO = {
         id: parsedUserId,
         token,
@@ -308,6 +324,9 @@ const handleStartSession = async () => {
       setSessionFilters(dto);
 
       await apiService.put(`/session/${sessionCode}/filters`, dto);
+
+      // Store timePerRound for the vote page timer
+      sessionStorage.setItem(`timePerRound:${sessionCode}`, String(values.timePerRound));
 
       //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
       const firstMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/next`);
