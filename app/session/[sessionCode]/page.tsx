@@ -1,9 +1,12 @@
 "use client";
 
 import { useApi } from "@/hooks/useApi";
+import { getApiDomain } from "@/utils/domain";
+import { Client } from "@stomp/stompjs";
 import { CopyOutlined } from "@ant-design/icons";
 import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
+import SockJS from "sockjs-client";
 import { useEffect, useMemo, useState } from "react";
 
 interface SessionPutDTO {
@@ -30,6 +33,21 @@ interface SessionFilterPutDTO {
   genres?: string[];
   minRating?: number;
   releaseYear?: number;
+}
+
+interface LobbyUpdate {
+  joinedUsers: number;
+  maxPlayers: number;
+}
+
+interface MovieGetDTO {
+  movieId: number;
+  title: string;
+  description: string;
+  posterPath: string;
+  rating: number;
+  releaseDate: string;
+  genres: string[];
 }
 
 // only in the frontend
@@ -97,10 +115,36 @@ const SessionWaitingRoom: React.FC = () => {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
       const userIdRaw = parseStorageValue<string | number>(localStorage.getItem("userId"));
       const parsedUserId = Number(userIdRaw);
+      const joinedSessionKey = `joinedSession:${routeSessionCode}`;
+      const joinedSessionMarker = sessionStorage.getItem(joinedSessionKey);
 
       if (!token || Number.isNaN(parsedUserId) || !routeSessionCode) {
         sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
         router.replace("/login");
+        return;
+      }
+
+      if (joinedSessionMarker === `${parsedUserId}:${token}`) {
+        const cachedSessionCode = routeSessionCode;
+        setSessionCode(cachedSessionCode);
+        setIsValid(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const storedHostId = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+      const storedSessionCode = localStorage.getItem("sessionCode");
+      if (
+        storedSessionCode === routeSessionCode &&
+        storedHostId !== null &&
+        Number(storedHostId) === parsedUserId
+      ) {
+        sessionStorage.setItem(joinedSessionKey, `${parsedUserId}:${token}`);
+        setSessionCode(routeSessionCode);
+        setIsHost(true);
+        setJoinedUsers(1);
+        setIsValid(true);
+        setIsLoading(false);
         return;
       }
 
@@ -114,6 +158,8 @@ const SessionWaitingRoom: React.FC = () => {
 
         setSessionCode(session.sessionCode);
         setIsHost(session.hostId === parsedUserId);
+        //mark session as joined in sessionStorage, User can join one time
+        sessionStorage.setItem(joinedSessionKey, `${parsedUserId}:${token}`);
         // Local hint only (not global)
         const key = `joinedUsers:${session.sessionCode}`;
         const hinted = Number(sessionStorage.getItem(key) ?? "1");
@@ -122,7 +168,7 @@ const SessionWaitingRoom: React.FC = () => {
         setIsValid(true);
       } catch (error) {
         console.error("Failed to verify session access:", error);
-        alert("Failed to verify host session access.");
+        alert("Failed to join session. It may already be full or you may already be connected.");
         router.replace("/play");
       } finally {
         setIsLoading(false);
@@ -131,6 +177,61 @@ const SessionWaitingRoom: React.FC = () => {
 
     void verifySessionAccess();
   }, [apiService, routeSessionCode, router]);
+
+  const getSocketEndpoint = () => {
+    const apiDomain = getApiDomain().replace(/\/$/, "");
+    return `${apiDomain}/gs-guide-websocket`;
+  };
+
+  useEffect(() => {
+    if (!isValid || !sessionCode) {
+      return;
+    }
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(getSocketEndpoint()),
+      reconnectDelay: 5000,
+      onConnect: () => {
+        client.subscribe(
+          `/topic/session/${sessionCode}/lobby`,
+          (frame: { body: string }) => {
+            try {
+              const payload = JSON.parse(frame.body) as LobbyUpdate;
+              if (typeof payload.joinedUsers === "number") {
+                setJoinedUsers(payload.joinedUsers);
+                sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(payload.joinedUsers));
+              }
+            } catch (error) {
+              //console.error("Failed to parse lobby update:", error);
+              messageApi.error("A user left or joined, but the update could not be processed.");
+            }
+          },
+        );
+
+        client.subscribe(
+          `/topic/session/${sessionCode}/next`,
+          (frame: { body: string }) => {
+            try {
+              const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
+              sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(nextMovie));
+              router.replace(`/session/${sessionCode}/vote`);
+            } catch (error) {
+              //console.error("Failed to parse next movie update:", error);
+              messageApi.error("Failed to parse next movie update.");
+            }
+          },
+        );
+      },
+      onStompError: (frame: { headers: Record<string, string> }) => {
+        console.error("STOMP error:", frame.headers["message"]);
+      },
+    });
+    client.activate();
+
+    return () => {
+      void client.deactivate();
+    };
+  }, [isValid, sessionCode, router]);
 
   // persist filters so they dont get lost after refresh
   useEffect(() => {
@@ -223,6 +324,13 @@ const handleStartSession = async () => {
       setSessionFilters(dto);
 
       await apiService.put(`/session/${sessionCode}/filters`, dto);
+
+      // Store timePerRound for the vote page timer
+      sessionStorage.setItem(`timePerRound:${sessionCode}`, String(values.timePerRound));
+
+      //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
+      const firstMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/next`);
+      sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(firstMovie));
 
       messageApi.success("Session started! Redirecting...");
       router.replace(`/session/${sessionCode}/vote`);

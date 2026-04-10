@@ -646,6 +646,23 @@ color: var(--background) !important;
 max-width: 430px;
 }
 
+.vote-loading-wrap {
+min-height: 380px;
+}
+
+.vote-waiting-wrap {
+min-height: 380px;
+text-align: center;
+}
+
+.vote-waiting-stack {
+align-items: center;
+}
+
+.vote-waiting-title.ant-typography {
+margin: 0 !important;
+}
+
 .vote-screen {
 display: flex;
 flex-direction: column;
@@ -685,6 +702,14 @@ background: rgba(255, 255, 255, 0.03);
 width: 100%;
 max-width: 330px;
 text-align: left;
+}
+
+.vote-title.ant-typography {
+margin-bottom: 8px !important;
+}
+
+.vote-meta-row {
+margin-bottom: 16px;
 }
 
 .vote-info .ant-typography,
