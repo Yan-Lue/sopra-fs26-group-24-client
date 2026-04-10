@@ -290,7 +290,7 @@ const VotePage: React.FC = () => {
             </div>
           ) : isWaitingForNextMovie ? (
             <div className="host-loading-wrap vote-waiting-wrap">
-              <Space direction="vertical" size={12} className="vote-waiting-stack">
+              <Space orientation="vertical" size={12} className="vote-waiting-stack">
                 <Spin size="large" />
                 <Typography.Title level={3} className="vote-waiting-title">
                   Waiting for other players...
