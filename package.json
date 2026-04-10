@@ -10,6 +10,7 @@
     "fmt": "deno fmt"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.2.1",
     "@ant-design/nextjs-registry": "^1.0.2",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "antd": "^6.0.0",
@@ -17,13 +18,15 @@
     "node-localstorage": "^3.0.5",
     "process": "^0.11.10",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.0",
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/sockjs-client": "^1.5.4",
     "eslint": "^9.21.0",
     "eslint-config-next": "^15.2.0",
     "typescript": "^5"
