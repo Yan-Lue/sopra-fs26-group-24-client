@@ -2,12 +2,13 @@
 
 import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
-import { Client } from "@stomp/stompjs";
+import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined } from "@ant-design/icons";
+import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
-import { useEffect, useMemo, useState } from "react";
 
 interface SessionPutDTO {
   id: number;
@@ -33,6 +34,7 @@ interface SessionFilterPutDTO {
   genres?: string[];
   minRating?: number;
   releaseYear?: number;
+  timePerRound: number;
 }
 
 interface LobbyUpdate {
@@ -97,6 +99,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [isStarting, setIsStarting] = useState(false);
+  const hasRedirectedRef = useRef(false);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
@@ -109,6 +112,16 @@ const SessionWaitingRoom: React.FC = () => {
       }),
     [],
   );
+
+  // helper function to handle correct redirect
+  const redirectToVoteWithMovie = (movie: MovieGetDTO) => {
+      if (!sessionCode || hasRedirectedRef.current) return;
+
+      hasRedirectedRef.current = true;
+      sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
+
+      router.replace(`/session/${sessionCode}/vote`);
+    };
 
   useEffect(() => {
     const verifySessionAccess = async () => {
@@ -213,8 +226,7 @@ const SessionWaitingRoom: React.FC = () => {
           (frame: { body: string }) => {
             try {
               const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
-              sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(nextMovie));
-              router.replace(`/session/${sessionCode}/vote`);
+              redirectToVoteWithMovie(nextMovie);
             } catch (error) {
               //console.error("Failed to parse next movie update:", error);
               messageApi.error("Failed to parse next movie update.");
@@ -239,6 +251,46 @@ const SessionWaitingRoom: React.FC = () => {
     sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
   }, [sessionCode, sessionFilters]);
 
+  // fallback polling for current movie in case a participant misses the websocket message when host starts the session, or if they refresh during the session
+  useEffect(() => {
+    if (!isValid || !sessionCode || isHost) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const pollCurrentMovie = async () => {
+      if (isCancelled || hasRedirectedRef.current) return;
+
+      try {
+        const current = await apiService.get<MovieGetDTO>(
+          `/session/${sessionCode}/current`
+        );
+
+      if (isCancelled || hasRedirectedRef.current) return;
+        redirectToVoteWithMovie(current);
+      } catch (error) {
+        const apiError = error as { status?: number };
+        if (apiError?.status === 409) {
+        return;
+      }
+        if (apiError?.status === 404) {
+          return;
+        }
+      }
+    };
+
+    void pollCurrentMovie();
+    const intervalId = window.setInterval(() => {
+    void pollCurrentMovie();
+    }, 1500);
+
+    return () => {
+    isCancelled = true;
+    window.clearInterval(intervalId);
+    };
+}, [apiService, isHost, isValid, sessionCode]);
+
   // update DTO when new genres are selected or deselected, so that backend can build the session filters
   const handleGenreToggle = (genre: string, checked: boolean) => {
     setSelectedGenres((prev) => {
@@ -254,15 +306,7 @@ const SessionWaitingRoom: React.FC = () => {
 
   const handleLeave = () => {
     if (sessionCode) {
-      const key = `joinedUsers:${sessionCode}`;
-      const current = Number(sessionStorage.getItem(key) ?? "1");
-      const next = Math.max(current - 1, 0);
-
-      if (next === 0) {
-        sessionStorage.removeItem(key);
-      } else {
-        sessionStorage.setItem(key, String(next));
-      }
+      clearSessionClientState(sessionCode);
     }
     router.replace("/home");
   };
@@ -277,15 +321,6 @@ const SessionWaitingRoom: React.FC = () => {
   }
 };
 
-  const parseStorageValue = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return raw as unknown as T;
-  }
-};
-
 // take values from form, build DTO and send to backend to build session filters
 const buildSessionFilterDTO = (
   values: FilterFormValues,
@@ -293,6 +328,7 @@ const buildSessionFilterDTO = (
 ): SessionFilterPutDTO => {
   const dto: SessionFilterPutDTO = {
     roundLimit: values.rounds,
+    timePerRound: values.timePerRound,
   };
 
   if (genres.length > 0) {
@@ -328,12 +364,13 @@ const handleStartSession = async () => {
       // Store timePerRound for the vote page timer
       sessionStorage.setItem(`timePerRound:${sessionCode}`, String(values.timePerRound));
 
+      // add short delay to ensure correct redirect 
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
       const firstMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/next`);
-      sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(firstMovie));
-
+      redirectToVoteWithMovie(firstMovie);
       messageApi.success("Session started! Redirecting...");
-      router.replace(`/session/${sessionCode}/vote`);
     } catch (error) {
       console.error("Failed to start session:", error);
       messageApi.error("Failed to start session. Please check your filter settings and try again.");

@@ -2,6 +2,7 @@
 
 import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
+import { parseStorageValue } from "@/utils/storage";
 import { Button, Card, Form, Input, message, Select } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -88,12 +89,19 @@ const Play: React.FC = () => {
       return;
     }
 
+    const trimmedSessionName = values.sessionName.trim();
+    if (!trimmedSessionName) {
+      createForm.setFields([{ name: "sessionName", errors: ["Session name cannot be empty."] }]);
+      return;
+    }
+
     try {
       setLoading(true);
       
       // Add hostId from localStorage to the values
       const payload: CreateSessionPayload = {
         ...values,
+        sessionName: trimmedSessionName,
         hostId: Number(userId),
       };
 
@@ -159,10 +167,19 @@ const Play: React.FC = () => {
   try {
     const session = await apiService.put<JoinSessionResponse>(`/session/${trimmedCode}`, payload);
 
+    // needed for later checks on voting page
+    localStorage.setItem("hostId", session.hostId.toString());
+
     // Optional local hint only (not global), implement in backend for full functionality
     const key = `joinedUsers:${session.sessionCode}`;
     const current = Number(sessionStorage.getItem(key) ?? "1");
     sessionStorage.setItem(key, String(current + 1));
+
+    // mark participant as already joined so waiting-room verify does NOT join again
+    sessionStorage.setItem(
+      `joinedSession:${session.sessionCode}`,
+      `${userId}:${token}`,
+    );
 
     messageApi.success("Session joined successfully!");
     router.push(`/session/${session.sessionCode}`);
@@ -186,15 +203,9 @@ const Play: React.FC = () => {
         errors: ["Failed to join session. Please try again."],
       },
     ]);
-  }
-};
 
-  const parseStorageValue = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return raw as unknown as T;
+    localStorage.removeItem("hostId");
+    sessionStorage.removeItem(`joinedSession:${trimmedCode}`);
   }
 };
 

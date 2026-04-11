@@ -1,6 +1,7 @@
 "use client";
 
 import { useApi } from "@/hooks/useApi";
+import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, Modal, Select, Spin, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
@@ -68,16 +69,6 @@ const [isGuest, setIsGuest] = useState(false);
 const [isHistorySaved, setIsHistorySaved] = useState(false);
 const [isModalVisible, setIsModalVisible] = useState(false);
 const [createForm] = Form.useForm<CreateSessionFormValues>();
-
-// think abaout moving this to a utils file as we need it in multiple places
-const parseStorageValue = <T,>(raw: string | null): T | null => {
-    if (!raw) return null;
-    try {
-    return JSON.parse(raw) as T;
-    } catch {
-    return raw as unknown as T;
-    }
-};
 
 const calculateScore = (likes: number, dislikes: number): number => {
     return likes - dislikes;
@@ -181,7 +172,7 @@ const handleSaveToHistory = async () => {
     const historyKey = `historySaved:${routeSessionCode}:${parsedUserId}`;
 
     // TODO: call backend endpoint later, endpoint name can be changed, just a first idea
-    // await apiService.post(`/user/${parsedUserId}/history`, { sessionCode: routeSessionCode });
+    // await apiService.post(`/users/${parsedUserId}/history`, { sessionCode: routeSessionCode });
 
     localStorage.setItem(historyKey, "true");
     setIsHistorySaved(true);
@@ -233,7 +224,8 @@ const handleConfirmNewRound = async () => {
 };
 
 const handleLeaveSession = () => {
-    router.replace("/home");
+  clearSessionClientState(routeSessionCode);
+  router.replace("/home");
 };
 
 const moviesSortedByLikes = [...movieResults].sort(

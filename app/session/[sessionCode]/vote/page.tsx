@@ -2,11 +2,12 @@
 
 import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
+import { parseStorageValue } from "@/utils/storage";
 import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
-import SockJS from "sockjs-client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import SockJS from "sockjs-client";
 
 //useRef allows us to keep track of whether we're currently advancing to the next movie, preventing multiple simultaneous advances if the timer triggers while an advance is already in progress.
 
@@ -43,6 +44,15 @@ interface VotePutDTO {
   token: string;
 }
 
+interface SessionEndPayload {
+  type: string;
+  sessionCode: string;
+  reason?: string;
+  currentMovieIndex?: number;
+  totalMovies?: number;
+  timestamp?: number;
+}
+
 const VotePage: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -56,16 +66,8 @@ const VotePage: React.FC = () => {
   const [votedMovieIds, setVotedMovieIds] = useState<number[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [messageApi, contextHolder] = message.useMessage();
+  const [isHost, setIsHost] = useState(false);
   const isAdvancingRef = useRef(false);
-
-  const parseStorageValue = <T,>(raw: string | null): T | null => {
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      return raw as unknown as T;
-    }
-  };
 
   const posterUrl = useMemo(() => {
     if (!movie?.posterPath) return "";
@@ -99,6 +101,11 @@ const VotePage: React.FC = () => {
         return;
       }
 
+      const storedHostIdRaw = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+      const storedHostId = Number(storedHostIdRaw);
+      setIsHost(!Number.isNaN(storedHostId) && storedHostId === parsedUserId);
+
+
       const cachedMovie = parseStorageValue<MovieGetDTO>(
         sessionStorage.getItem(`currentMovie:${routeSessionCode}`),
       );
@@ -123,6 +130,21 @@ const VotePage: React.FC = () => {
               }
             },
           );
+          
+          // Backend sends payload to indicate no more movies are left
+          client.subscribe(`/topic/session/${routeSessionCode}/end`, (frame: { body: string }) => {
+            try {
+              const payload = JSON.parse(frame.body) as SessionEndPayload;
+              if (payload?.type !== "SESSION_ENDED") return;
+              if (payload?.sessionCode !== routeSessionCode) return;
+            } catch {
+              // If payload parse fails, still fallback redirect because this topic is session-specific.
+            }
+
+            sessionStorage.removeItem("currentMovie:" + routeSessionCode);
+            sessionStorage.removeItem("votedMovieIds:" + routeSessionCode);
+            router.replace(`/session/${routeSessionCode}/results`);
+          });
         },
         //log STOMP errors to console
         onStompError: (frame: { headers: Record<string, string> }) => {
@@ -148,11 +170,11 @@ const VotePage: React.FC = () => {
         void activeClient.deactivate();
       }
     };
-  }, [routeSessionCode, router]);
+  }, [messageApi, routeSessionCode, router]);
 
   // Auto-advance to next movie after timePerRound seconds
   useEffect(() => {
-    if (!movie || isLoading) return;
+    if (!movie || isLoading || !isHost) return;
 
     const timePerRoundRaw = sessionStorage.getItem(`timePerRound:${routeSessionCode}`);
     const timePerRound = timePerRoundRaw ? Number(timePerRoundRaw) : null;
@@ -174,10 +196,10 @@ const VotePage: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [movie, isLoading, routeSessionCode, apiService, messageApi]);
+  }, [movie, isHost, isLoading, routeSessionCode, apiService, messageApi]);
 
   const advanceToNextMovie = async () => {
-    if (isAdvancingRef.current) {
+    if (!isHost || isAdvancingRef.current) {
       return;
     }
 
@@ -188,17 +210,13 @@ const VotePage: React.FC = () => {
       setMovie(nextMovie);
       sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
     } catch (error) {
-      /** possible to redirect via error
-       
-      const apiError = error as ApplicationError;
-      
+      const apiError = error as { status?: number };
+      // currently left in to still redirect while backend is not fully implemented
       if (apiError?.status === 409) {
         router.replace(`/session/${routeSessionCode}/results`);
+        messageApi.info("Session ended. Redirecting to results...");
         return;
       }
-        */
-      console.error("Failed to fetch next movie:", error);
-      messageApi.error("Failed to load next movie.");
     } finally {
       isAdvancingRef.current = false;
     }
@@ -261,6 +279,50 @@ const VotePage: React.FC = () => {
   //should prevent multiples votes for same movie 
   const hasVotedCurrentMovie = movie ? votedMovieIds.includes(movie.movieId) : false;
   const isWaitingForNextMovie = hasVotedCurrentMovie && !isSubmittingVote;
+
+  useEffect(() => {
+    if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const pollCurrentMovie = async () => {
+      if (cancelled) return;
+
+      try {
+        const currentMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/current`);
+        if (cancelled || !currentMovie) return;
+
+        setMovie(currentMovie);
+        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
+      } catch (error) {
+        const apiError = error as { status?: number };
+
+        // here again, currently rely on 409 from backend to indicate session end 
+        if (apiError?.status === 409) {
+          sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
+          sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
+          router.replace(`/session/${routeSessionCode}/results`);
+          return;
+        }
+
+        if (apiError?.status === 404) {
+          return;
+        }
+      }
+    };
+
+    void pollCurrentMovie();
+    const id = window.setInterval(() => {
+      void pollCurrentMovie();
+    }, 1200);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService]);
 
   if (isLoading) {
     return (
