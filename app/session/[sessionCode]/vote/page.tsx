@@ -44,15 +44,6 @@ interface VotePutDTO {
   token: string;
 }
 
-interface SessionEndPayload {
-  type: string;
-  sessionCode: string;
-  reason?: string;
-  currentMovieIndex?: number;
-  totalMovies?: number;
-  timestamp?: number;
-}
-
 const VotePage: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -65,9 +56,17 @@ const VotePage: React.FC = () => {
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [votedMovieIds, setVotedMovieIds] = useState<number[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [timePerRound, setTimePerRound] = useState<number | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
   const isAdvancingRef = useRef(false);
+
+  const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
+    if (!m) return null;
+    if (typeof m.movieId === "number") return m.movieId;
+    const fallback = (m as { id?: unknown }).id;
+    return typeof fallback === "number" ? fallback : null;
+  };
 
   const posterUrl = useMemo(() => {
     if (!movie?.posterPath) return "";
@@ -105,6 +104,20 @@ const VotePage: React.FC = () => {
       const storedHostId = Number(storedHostIdRaw);
       setIsHost(!Number.isNaN(storedHostId) && storedHostId === parsedUserId);
 
+      try {
+        const serverTimePerRound = await apiService.get<number>(`/session/${routeSessionCode}/time`);
+        if (typeof serverTimePerRound === "number" && serverTimePerRound > 0) {
+          setTimePerRound(serverTimePerRound);
+        }
+      } catch {
+        // Optional fallback to local cache if request fails
+        const localRaw = sessionStorage.getItem(`timePerRound:${routeSessionCode}`);
+        const localValue = localRaw ? Number(localRaw) : null;
+        if (localValue && localValue > 0) {
+          setTimePerRound(localValue);
+        }
+      }
+
 
       const cachedMovie = parseStorageValue<MovieGetDTO>(
         sessionStorage.getItem(`currentMovie:${routeSessionCode}`),
@@ -133,12 +146,27 @@ const VotePage: React.FC = () => {
           
           // Backend sends payload to indicate no more movies are left
           client.subscribe(`/topic/session/${routeSessionCode}/end`, (frame: { body: string }) => {
+            // trim any whitespace and remove quotes
+            const normalizeCode = (value: string) => value.trim().replace(/^"(.*)"$/, "$1");
+
+            let endedSessionCode: string | null = null;
             try {
-              const payload = JSON.parse(frame.body) as SessionEndPayload;
-              if (payload?.type !== "SESSION_ENDED") return;
-              if (payload?.sessionCode !== routeSessionCode) return;
+              const payload = JSON.parse(frame.body) as unknown;
+              if (typeof payload === "string") {
+                endedSessionCode = normalizeCode(payload);
+              } else if (payload && typeof payload === "object" && "sessionCode" in payload) {
+                const value = (payload as { sessionCode?: unknown }).sessionCode;
+                endedSessionCode = typeof value === "string" ? value : null;
+              } 
             } catch {
-              // If payload parse fails, still fallback redirect because this topic is session-specific.
+                endedSessionCode = normalizeCode(frame.body);
+            }
+
+            const currentSessionCode = normalizeCode(routeSessionCode);
+
+            // prevent accidental redirect if we receive a message for a different session
+            if (endedSessionCode && endedSessionCode !== currentSessionCode) {
+              return;
             }
 
             sessionStorage.removeItem("currentMovie:" + routeSessionCode);
@@ -170,15 +198,11 @@ const VotePage: React.FC = () => {
         void activeClient.deactivate();
       }
     };
-  }, [messageApi, routeSessionCode, router]);
+  }, [apiService, messageApi, routeSessionCode, router]);
 
   // Auto-advance to next movie after timePerRound seconds
   useEffect(() => {
     if (!movie || isLoading || !isHost) return;
-
-    const timePerRoundRaw = sessionStorage.getItem(`timePerRound:${routeSessionCode}`);
-    const timePerRound = timePerRoundRaw ? Number(timePerRoundRaw) : null;
-
     if (!timePerRound || timePerRound <= 0) return;
 
     setTimeRemaining(timePerRound);
@@ -196,7 +220,7 @@ const VotePage: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [movie, isHost, isLoading, routeSessionCode, apiService, messageApi]);
+  }, [movie, isHost, isLoading, timePerRound]);
 
   const advanceToNextMovie = async () => {
     if (!isHost || isAdvancingRef.current) {
@@ -211,7 +235,7 @@ const VotePage: React.FC = () => {
       sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
     } catch (error) {
       const apiError = error as { status?: number };
-      // currently left in to still redirect while backend is not fully implemented
+      // currently left in to still redirect as fallback
       if (apiError?.status === 409) {
         router.replace(`/session/${routeSessionCode}/results`);
         messageApi.info("Session ended. Redirecting to results...");
@@ -227,8 +251,15 @@ const VotePage: React.FC = () => {
     if (!movie || isSubmittingVote) {
       return;
     }
+
+    const resolvedMovieId = getMovieId(movie);
+    if (!resolvedMovieId) {
+      messageApi.error("Movie data not ready yet. Please wait and try again.");
+      return;
+    }
+
     //frontend message to prevent multiple votes for same movei (handled in backend)
-    if (votedMovieIds.includes(movie.movieId)) {
+    if (votedMovieIds.includes(resolvedMovieId)) {
       messageApi.info("You already voted for this movie.");
       return;
     }
@@ -252,7 +283,7 @@ const VotePage: React.FC = () => {
 
     const votePayload: VotePutDTO = {
       userId: parsedUserId,
-      movieId: movie.movieId,
+      movieId: resolvedMovieId,
       score: scoreMap[vote],
       sessionCode: routeSessionCode,
       token,
@@ -261,7 +292,7 @@ const VotePage: React.FC = () => {
     try {
       setIsSubmittingVote(true);
       await apiService.post<string>(`/session/${routeSessionCode}/vote`, votePayload);
-      const nextVotedMovieIds = [...votedMovieIds, movie.movieId];
+      const nextVotedMovieIds = [...votedMovieIds, resolvedMovieId];
       setVotedMovieIds(nextVotedMovieIds);
       sessionStorage.setItem(
         `votedMovieIds:${routeSessionCode}`,
@@ -269,7 +300,7 @@ const VotePage: React.FC = () => {
       );
       messageApi.success("Vote submitted.");
     } catch (error) {
-      //console.error("Failed to submit vote:", error);
+      console.error("Failed to submit vote:", error);
       messageApi.error("Failed to submit vote. Please try again.");
     } finally {
       setIsSubmittingVote(false);
@@ -277,7 +308,8 @@ const VotePage: React.FC = () => {
   };
 
   //should prevent multiples votes for same movie 
-  const hasVotedCurrentMovie = movie ? votedMovieIds.includes(movie.movieId) : false;
+  const currentMovieId = getMovieId(movie);
+  const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
   const isWaitingForNextMovie = hasVotedCurrentMovie && !isSubmittingVote;
 
   useEffect(() => {

@@ -361,7 +361,7 @@ const handleStartSession = async () => {
 
       await apiService.put(`/session/${sessionCode}/filters`, dto);
 
-      // Store timePerRound for the vote page timer
+      // Fallback if DTO fails
       sessionStorage.setItem(`timePerRound:${sessionCode}`, String(values.timePerRound));
 
       // add short delay to ensure correct redirect 
