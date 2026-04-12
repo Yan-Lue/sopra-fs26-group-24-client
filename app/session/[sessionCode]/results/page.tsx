@@ -16,11 +16,6 @@ interface CreateSessionPayload extends CreateSessionFormValues {
   hostId: number;
 }
 
-interface SessionPutDTO {
-id: number;
-token: string;
-}
-
 interface SessionResponse {
 id: number;
 sessionCode: string;
@@ -28,24 +23,19 @@ sessionToken: string;
 hostId: number;
 }
 
-interface MovieVoteResultDTO {
+interface MovieResultDTO {
 movieId: number;
 title: string;
-description: string;
+description?: string;
 posterPath: string;
-rating: number;
-releaseDate: string;
-genres: string[];
+rating?: number;
+releaseDate?: string;
+genres?: string[];
 similarMovies?: unknown[];
-likes: number;
-dislikes: number;
-neutrals: number;
-
-}
-
-interface SessionResultsDTO {
-sessionId: number;
-movieResults: MovieVoteResultDTO[];
+score: number;
+likes?: number;
+dislikes?: number;
+neutrals?: number;
 }
 
 const playerOptions = Array.from({ length: 16 }, (_, index) => ({
@@ -62,17 +52,13 @@ const routeSessionCode = params.sessionCode as string;
 const [isAuthorized, setIsAuthorized] = useState(false);
 const [loading, setLoading] = useState(true);
 const [isHost, setIsHost] = useState(false);
-const [movieResults, setMovieResults] = useState<MovieVoteResultDTO[]>([]);
+const [movieResults, setMovieResults] = useState<MovieResultDTO[]>([]);
 const [messageApi, contextHolder] = message.useMessage();
 const [isSavingToHistory, setIsSavingToHistory] = useState(false);
 const [isGuest, setIsGuest] = useState(false);
 const [isHistorySaved, setIsHistorySaved] = useState(false);
 const [isModalVisible, setIsModalVisible] = useState(false);
 const [createForm] = Form.useForm<CreateSessionFormValues>();
-
-const calculateScore = (likes: number, dislikes: number): number => {
-    return likes - dislikes;
-};
 
 const getPosterUrl = (posterPath: string): string => {
     if (!posterPath) return "";
@@ -94,62 +80,15 @@ useEffect(() => {
 
         setIsGuest(token.startsWith("Guest-"));
 
-        // const payload: SessionPutDTO = {
-        //     id: parsedUserId,
-        //     token,
-        // };
+        const storedHostIdRaw = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+        const storedHostId = Number(storedHostIdRaw);
+        setIsHost(!Number.isNaN(storedHostId) && storedHostId === parsedUserId);
 
     try {
-        // const session = await apiService.put<SessionResponse>(`/session/${routeSessionCode}`, payload);
-        // setIsHost(session.hostId === parsedUserId);
         setIsAuthorized(true);
 
-        // for testing until websockets are configured
-        setIsHost(true);
-        setMovieResults([
-            {
-                movieId: 1,
-                title: "Inception",
-                posterPath: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-                likes: 3,
-                dislikes: 0,
-                neutrals: 2,
-                description: "A thief who steals corporate secrets through dream-sharing technology is given one final impossible task.", 
-                rating: 8.8,
-                releaseDate: "2010-07-16",
-                genres: ["Action", "Adventure", "Sci-Fi"]
-
-            },
-            {
-                movieId: 2,
-                title: "The Shawshank Redemption",
-                posterPath: "/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-                likes: 5,
-                dislikes: 0,
-                neutrals: 0,
-                description: "Two imprisoned men bond over years, finding redemption and hope through acts of common decency.",
-                rating: 9.3,
-                releaseDate: "1994-09-23",
-                genres: ["Drama"]
-            },
-            {
-                movieId: 3,
-                title: "Interstellar",
-                posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-                likes: 4,
-                dislikes: 1,
-                neutrals: 0,
-                description: "A team of explorers travel through a wormhole in space to ensure humanity's survival.", 
-                rating: 8.6,
-                releaseDate: "2014-11-07",
-                genres: ["Adventure", "Drama", "Sci-Fi"]
-            }
-            ]);
-
-        // TODO: Implement the results endpoint in the backend, uncomment this part when ready
-        // Fetch results for this session
-        // const results = await apiService.get<SessionResultsDTO>(`/session/${routeSessionCode}/results`);
-        // setMovieResults(results.movieResults ?? []);
+        const results = await apiService.get<MovieResultDTO[]>(`/session/${routeSessionCode}/results`);
+        setMovieResults(Array.isArray(results) ? results : []);
     } catch (error) {
         console.error("Failed to verify session or load results:", error);
         messageApi.error("Failed to load the session results.");
@@ -228,9 +167,7 @@ const handleLeaveSession = () => {
   router.replace("/home");
 };
 
-const moviesSortedByLikes = [...movieResults].sort(
-  (a, b) => (b.likes - a.likes) || (a.dislikes - b.dislikes)
-);
+const moviesSortedByScore = [...movieResults].sort((a, b) => b.score - a.score);
 
 if (loading) {
     return (
@@ -283,9 +220,9 @@ return (
               <Typography.Text style={{ marginTop: 16 }}>Loading results...</Typography.Text>
             </div>
           ) : (
-            moviesSortedByLikes.map((movie) => {
-              const score = calculateScore(movie.likes, movie.dislikes);
+            moviesSortedByScore.map((movie) => {
               const posterUrl = getPosterUrl(movie.posterPath);
+              const score = movie.score ?? 0;
 
               return (
                 <Card key={movie.movieId} className="result-item-card">
@@ -311,7 +248,7 @@ return (
 
                         <div className="result-item-tags">
                             <Typography.Text className="result-item-meta">
-                                {movie.likes} likes • {movie.dislikes} dislikes • {movie.neutrals} neutral
+                                {movie.likes ?? 0} likes • {movie.dislikes ?? 0} dislikes • {movie.neutrals ?? 0} neutral
                             </Typography.Text>
 
                             <div className="vote-info">
