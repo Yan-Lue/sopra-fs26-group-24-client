@@ -140,6 +140,7 @@ const SessionWaitingRoom: React.FC = () => {
       if (joinedSessionMarker === `${parsedUserId}:${token}`) {
         const cachedSessionCode = routeSessionCode;
         setSessionCode(cachedSessionCode);
+        setJoinedUsers(Number(sessionStorage.getItem(`joinedUsers:${cachedSessionCode}`) ?? "1"));
         setIsValid(true);
         setIsLoading(false);
         return;
