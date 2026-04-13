@@ -20,6 +20,7 @@ interface SessionResponse {
   sessionCode: string;
   sessionToken: string;
   hostId: number;
+  joinedUsers?: number;
 }
 
 interface FilterFormValues {
@@ -131,6 +132,7 @@ const SessionWaitingRoom: React.FC = () => {
       const joinedSessionKey = `joinedSession:${routeSessionCode}`;
       const joinedSessionMarker = sessionStorage.getItem(joinedSessionKey);
 
+      // is the user authenticated and is there a session code in the route
       if (!token || Number.isNaN(parsedUserId) || !routeSessionCode) {
         sessionStorage.setItem("redirectMessage", "Please log in to use this service.");
         router.replace("/login");
@@ -140,11 +142,13 @@ const SessionWaitingRoom: React.FC = () => {
       if (joinedSessionMarker === `${parsedUserId}:${token}`) {
         const cachedSessionCode = routeSessionCode;
         setSessionCode(cachedSessionCode);
+        setJoinedUsers(Number(sessionStorage.getItem(`joinedUsers:${cachedSessionCode}`) ?? "1"));
         setIsValid(true);
         setIsLoading(false);
         return;
       }
 
+      // handles the case where user would refresh the page
       const storedHostId = parseStorageValue<string | number>(localStorage.getItem("hostId"));
       const storedSessionCode = localStorage.getItem("sessionCode");
       if (
@@ -171,13 +175,13 @@ const SessionWaitingRoom: React.FC = () => {
 
         setSessionCode(session.sessionCode);
         setIsHost(session.hostId === parsedUserId);
-        //mark session as joined in sessionStorage, User can join one time
+        localStorage.setItem("hostId", session.hostId.toString());
         sessionStorage.setItem(joinedSessionKey, `${parsedUserId}:${token}`);
-        // Local hint only (not global)
-        const key = `joinedUsers:${session.sessionCode}`;
-        const hinted = Number(sessionStorage.getItem(key) ?? "1");
-        setJoinedUsers(hinted);
 
+        const actualCount = session.joinedUsers ?? 1;
+        sessionStorage.setItem(`joinedUsers:${session.sessionCode}`, String(actualCount));
+        setJoinedUsers(actualCount);
+        
         setIsValid(true);
       } catch (error) {
         console.error("Failed to verify session access:", error);
@@ -195,7 +199,7 @@ const SessionWaitingRoom: React.FC = () => {
     const apiDomain = getApiDomain().replace(/\/$/, "");
     return `${apiDomain}/gs-guide-websocket`;
   };
-
+  // only afrer successful session access is the user able to subscribe to websockets for real-time updates in the lobby and session
   useEffect(() => {
     if (!isValid || !sessionCode) {
       return;

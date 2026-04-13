@@ -45,6 +45,7 @@ interface JoinSessionResponse {
   sessionId: number;
   sessionToken: string;
   hostId: number;
+  joinedUsers?: number; // Optional, for frontend logic
 }
 
 // Generate player options for the Select component
@@ -159,54 +160,8 @@ const Play: React.FC = () => {
     return;
   }
 
-  const payload: SessionPutDTO = {
-    id: userId,
-    token,
-  };
-
-  try {
-    const session = await apiService.put<JoinSessionResponse>(`/session/${trimmedCode}`, payload);
-
-    // needed for later checks on voting page
-    localStorage.setItem("hostId", session.hostId.toString());
-
-    // Optional local hint only (not global), implement in backend for full functionality
-    const key = `joinedUsers:${session.sessionCode}`;
-    const current = Number(sessionStorage.getItem(key) ?? "1");
-    sessionStorage.setItem(key, String(current + 1));
-
-    // mark participant as already joined so waiting-room verify does NOT join again
-    sessionStorage.setItem(
-      `joinedSession:${session.sessionCode}`,
-      `${userId}:${token}`,
-    );
-
-    messageApi.success("Session joined successfully!");
-    router.push(`/session/${session.sessionCode}`);
-  } catch (error) {
-    const err = error as { status?: number };
-
-    if (err.status === 404) {
-      joinForm.setFields([
-        {
-          name: "sessionCode",
-          errors: ["Session not found. Check the code and try again."],
-        },
-      ]);
-      return;
-    }
-
-    console.error("Join session error:", error);
-    joinForm.setFields([
-      {
-        name: "sessionCode",
-        errors: ["Failed to join session. Please try again."],
-      },
-    ]);
-
-    localStorage.removeItem("hostId");
-    sessionStorage.removeItem(`joinedSession:${trimmedCode}`);
-  }
+  // Navigate to session page; the session page will handle joining if needed
+  router.push(`/session/${trimmedCode}`);
 };
 
   if (!isAuthorized) {

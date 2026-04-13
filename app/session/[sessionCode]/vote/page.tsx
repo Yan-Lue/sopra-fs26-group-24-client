@@ -60,6 +60,7 @@ const VotePage: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
   const isAdvancingRef = useRef(false);
+  const lastMovieIdRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -202,12 +203,20 @@ const VotePage: React.FC = () => {
 
   // Auto-advance to next movie after timePerRound seconds
   useEffect(() => {
-    if (!movie || isLoading || !isHost) return;
+    if (!movie || isLoading) return;
     if (!timePerRound || timePerRound <= 0) return;
 
+    const currentMovieId = getMovieId(movie);
+    if (currentMovieId === lastMovieIdRef.current) return;
+
+    lastMovieIdRef.current = currentMovieId;
     setTimeRemaining(timePerRound);
-    
-    //manual countdown ;), possible to display remaining time to users etc...
+  }, [movie, isLoading, timePerRound]);
+
+  // Start countdown timer
+  useEffect(() => {
+    if (!timePerRound || timePerRound <= 0) return;
+
     const countdownInterval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -220,7 +229,7 @@ const VotePage: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [movie, isHost, isLoading, timePerRound]);
+  }, [timePerRound]);
 
   const advanceToNextMovie = async () => {
     if (!isHost || isAdvancingRef.current) {
@@ -325,6 +334,10 @@ const VotePage: React.FC = () => {
       try {
         const currentMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/current`);
         if (cancelled || !currentMovie) return;
+
+        const currentMovieId = getMovieId(currentMovie);
+        const existingMovieId = getMovieId(movie);
+        if (currentMovieId === existingMovieId) return; // No change, don't update
 
         setMovie(currentMovie);
         sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
