@@ -210,6 +210,7 @@ const VotePage: React.FC = () => {
     
     // Only reset if it's actually a different movie
     if (currentMovieId !== lastMovieIdRef.current) {
+      // Store the ID of the current movie to compare on the next update
       lastMovieIdRef.current = currentMovieId;
       setTimeRemaining(timePerRound);
     }
