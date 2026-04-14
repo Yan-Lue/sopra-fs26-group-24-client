@@ -33,6 +33,7 @@ interface SessionResponse {
   sessionCode: string;
   sessionToken: string;
   hostId: number;
+  usernames?: string[];
 }
 
 interface SessionPutDTO {
