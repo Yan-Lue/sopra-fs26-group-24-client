@@ -202,34 +202,48 @@ const VotePage: React.FC = () => {
   }, [apiService, messageApi, routeSessionCode, router]);
 
   // Auto-advance to next movie after timePerRound seconds
+  // 1. Reset the numeric state whenever a new movie arrives
   useEffect(() => {
-    if (!movie || isLoading) return;
-    if (!timePerRound || timePerRound <= 0) return;
+    if (!movie || isLoading || !timePerRound) return;
 
     const currentMovieId = getMovieId(movie);
-    if (currentMovieId === lastMovieIdRef.current) return;
-
-    lastMovieIdRef.current = currentMovieId;
-    setTimeRemaining(timePerRound);
+    
+    // Only reset if it's actually a different movie
+    if (currentMovieId !== lastMovieIdRef.current) {
+      // Store the ID of the current movie to compare on the next update
+      lastMovieIdRef.current = currentMovieId;
+      setTimeRemaining(timePerRound);
+    }
   }, [movie, isLoading, timePerRound]);
 
-  // Start countdown timer
+  // 2. The Countdown Heartbeat
   useEffect(() => {
+    // If no time is set, don't start the clock
     if (!timePerRound || timePerRound <= 0) return;
 
+
+    // countdownInterval will get an ID that we can then use to clear
     const countdownInterval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
-          void advanceToNextMovie();
+          
+          // CRITICAL: Only the host triggers the API to move everyone to the next movie
+          if (isHost && !isAdvancingRef.current) {
+            void advanceToNextMovie();
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
+    // This cleanup function runs every time the 'movie' changes,
+    // the old timer is gone and a new one can start.
     return () => clearInterval(countdownInterval);
-  }, [timePerRound]);
+    
+    // Adding 'movie' here is what prevents the "freeze"
+  }, [movie, timePerRound, isHost]);
 
   const advanceToNextMovie = async () => {
     if (!isHost || isAdvancingRef.current) {
