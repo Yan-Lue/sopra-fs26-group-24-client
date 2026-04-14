@@ -256,6 +256,14 @@ const SessionWaitingRoom: React.FC = () => {
         );
 
         client.subscribe(
+          `/topic/session/${sessionCode}/end`,
+          () => {
+            messageApi.info("The host has ended the session.");
+            void handleLeave(false);
+          },
+        );
+
+        client.subscribe(
           `/topic/session/${sessionCode}/next`,
           (frame: { body: string }) => {
             try {
@@ -338,7 +346,17 @@ const SessionWaitingRoom: React.FC = () => {
     });
   };
 
-  const handleLeave = () => {
+  const handleLeave = async (triggerApi = true) => {
+    if (sessionCode && triggerApi) {
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      if (token) {
+        try {
+          await apiService.delete(`/session/${sessionCode}?token=${token}`);
+        } catch (e) {
+          console.error("Failed to cleanly leave session:", e);
+        }
+      }
+    }
     if (sessionCode) {
       clearSessionClientState(sessionCode);
     }
@@ -570,12 +588,12 @@ const handleStartSession = async () => {
                   <Button className="start-session-btn" block loading={isStarting} onClick={handleStartSession}>
                     Start Session
                   </Button>
-                  <Button className="end-session-btn" block onClick={handleLeave}>
+                  <Button className="end-session-btn" block onClick={() => handleLeave(true)}>
                     End Session
                   </Button>
                 </>
               ) : (
-                <Button className="leave-session-btn" onClick={handleLeave}>
+                <Button className="leave-session-btn" onClick={() => handleLeave(true)}>
                   Leave Session
                 </Button>
               )}
