@@ -129,6 +129,9 @@ const Play: React.FC = () => {
       // register the host again and hit the session capacity check.
       sessionStorage.setItem(`joinedSession:${sessionCode}`, `${hostId}:${localStorage.getItem("token") ?? ""}`);
       sessionStorage.setItem(`joinedUsers:${sessionCode}`, "1");
+      if (session.usernames) {
+        sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(session.usernames));
+      }
 
       router.push(`/session/${sessionCode}`);
     } catch (error) {

@@ -21,6 +21,7 @@ interface SessionResponse {
   sessionToken: string;
   hostId: number;
   joinedUsers?: number;
+  usernames?: string[];
 }
 
 interface FilterFormValues {
@@ -41,6 +42,7 @@ interface SessionFilterPutDTO {
 interface LobbyUpdate {
   joinedUsers: number;
   maxPlayers: number;
+  usernames?: string[];
 }
 
 interface MovieGetDTO {
@@ -96,6 +98,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [isHost, setIsHost] = useState(false);
   const [sessionCode, setSessionCode] = useState<string | undefined>(routeSessionCode);
   const [joinedUsers, setJoinedUsers] = useState(0);
+  const [joinedUsernames, setJoinedUsernames] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
@@ -143,6 +146,18 @@ const SessionWaitingRoom: React.FC = () => {
         const cachedSessionCode = routeSessionCode;
         setSessionCode(cachedSessionCode);
         setJoinedUsers(Number(sessionStorage.getItem(`joinedUsers:${cachedSessionCode}`) ?? "1"));
+        
+        const storedHostId = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+        const storedSessionCode = localStorage.getItem("sessionCode");
+        if (storedSessionCode === routeSessionCode && storedHostId !== null && Number(storedHostId) === parsedUserId) {
+          setIsHost(true);
+        }
+        
+        const storedUsernames = sessionStorage.getItem(`joinedUsernames:${cachedSessionCode}`);
+        if (storedUsernames) {
+          setJoinedUsernames(JSON.parse(storedUsernames));
+        }
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -160,6 +175,12 @@ const SessionWaitingRoom: React.FC = () => {
         setSessionCode(routeSessionCode);
         setIsHost(true);
         setJoinedUsers(1);
+
+        const storedUsernamesHost = sessionStorage.getItem(`joinedUsernames:${routeSessionCode}`);
+        if (storedUsernamesHost) {
+          setJoinedUsernames(JSON.parse(storedUsernamesHost));
+        }
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -181,6 +202,11 @@ const SessionWaitingRoom: React.FC = () => {
         const actualCount = session.joinedUsers ?? 1;
         sessionStorage.setItem(`joinedUsers:${session.sessionCode}`, String(actualCount));
         setJoinedUsers(actualCount);
+
+        if (session.usernames) {
+          setJoinedUsernames(session.usernames);
+          sessionStorage.setItem(`joinedUsernames:${session.sessionCode}`, JSON.stringify(session.usernames));
+        }
         
         setIsValid(true);
       } catch (error) {
@@ -217,6 +243,10 @@ const SessionWaitingRoom: React.FC = () => {
               if (typeof payload.joinedUsers === "number") {
                 setJoinedUsers(payload.joinedUsers);
                 sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(payload.joinedUsers));
+              }
+              if (payload.usernames) {
+                setJoinedUsernames(payload.usernames);
+                sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(payload.usernames));
               }
             } catch (error) {
               //console.error("Failed to parse lobby update:", error);
@@ -550,6 +580,20 @@ const handleStartSession = async () => {
                 </Button>
               )}
             </div>
+          </div>
+        </Card>
+
+        <Card className="play-card session-side-card" title="Joined Users">
+          <div className="participant-settings">
+            {joinedUsernames.length > 0 ? (
+              joinedUsernames.map((username, i) => (
+                <Typography.Text key={i} className="host-meta-line" style={{ display: "block" }}>
+                  {username}
+                </Typography.Text>
+              ))
+            ) : (
+              <Typography.Text className="host-meta-line">No users have joined</Typography.Text>
+            )}
           </div>
         </Card>
       </div>
