@@ -14,7 +14,7 @@ const Profile: React.FC = () => {
   return (
     <div className="card-container">
       <p>
-        <strong>SampleUser</strong>
+        <strong>MORE CONTENT COMING IN M4</strong>
       </p>
     </div>
   );

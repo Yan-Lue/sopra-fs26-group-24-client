@@ -21,6 +21,7 @@ interface SessionResponse {
   sessionToken: string;
   hostId: number;
   joinedUsers?: number;
+  sessionName?: string;
 }
 
 interface FilterFormValues {
@@ -102,6 +103,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false);
   const hasRedirectedRef = useRef(false);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
+  const [sessionName, setSessionName] = useState<string>("Session");
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -173,6 +175,7 @@ const SessionWaitingRoom: React.FC = () => {
       try {
         const session = await apiService.put<SessionResponse>(`/session/${routeSessionCode}`, payload);
 
+        setSessionName(session.sessionName ?? "Session");
         setSessionCode(session.sessionCode);
         setIsHost(session.hostId === parsedUserId);
         localStorage.setItem("hostId", session.hostId.toString());
@@ -512,7 +515,7 @@ const handleStartSession = async () => {
           <div className="waiting-room-form">
             <div className="waiting-room-center">
               <Typography.Title level={3} className="host-section-title">
-                Ready to Start
+                {sessionName}
               </Typography.Title>
 
               <div className="session-code-row">
