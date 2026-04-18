@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Form, Modal, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -103,6 +103,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
+  const [modal, contextHolderModal] = Modal.useModal();
   const [isStarting, setIsStarting] = useState(false);
   const hasRedirectedRef = useRef(false);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
@@ -110,6 +111,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [sessionName, setSessionName] = useState<string>("Session");
 
   const [filterForm] = Form.useForm<FilterFormValues>();
+
 
   const roundOptions = useMemo(
     () =>
@@ -160,6 +162,8 @@ const SessionWaitingRoom: React.FC = () => {
         if (storedUsernames) {
           setJoinedUsernames(JSON.parse(storedUsernames));
         }
+
+        setSessionName(sessionStorage.getItem('sessionName') ?? "Session");
 
         setIsValid(true);
         setIsLoading(false);
@@ -262,7 +266,10 @@ const SessionWaitingRoom: React.FC = () => {
         client.subscribe(
           `/topic/session/${sessionCode}/end`,
           () => {
-            messageApi.info("The host has ended the session.");
+            sessionStorage.setItem(
+              "redirectInfo",
+              "Session ended by host. You were redirected to the home page."
+            );
             leaveLocally();
           },
         );
@@ -274,7 +281,6 @@ const SessionWaitingRoom: React.FC = () => {
               const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
               redirectToVoteWithMovie(nextMovie);
             } catch (error) {
-              //console.error("Failed to parse next movie update:", error);
               messageApi.error("Failed to parse next movie update.");
             }
           },
@@ -349,6 +355,27 @@ const SessionWaitingRoom: React.FC = () => {
       return next;
     });
   };
+
+  const redirectHomeWithMessage = (info: string) => {
+    sessionStorage.setItem("redirectInfo", info);
+    leaveLocally();
+  };
+
+  const handleConfirmLeave = () => {
+    modal.confirm({
+      className: "leave-session-confirm-modal", 
+      title: "Are you sure you want to leave?",
+      content: "All participants will be disconnected.",
+      okText: "Yes, leave",
+      okType: "primary",
+      cancelText: "No, stay",
+      onOk: async () => {
+        await handleLeave();
+        redirectHomeWithMessage("You ended the session. All participants have been disconnected.");
+      },
+    });
+  }
+
   //needed, because if host ends session, the client is not correctly redirected to home and triggers infinite loop.
   const leaveLocally = () => {
     if (sessionCode) {
@@ -533,6 +560,7 @@ const SessionWaitingRoom: React.FC = () => {
   return (
     <div className="page-with-nav">
       {contextHolder}
+      {contextHolderModal}
       <div className="session-layout">
         {isHost && (
           <Card className="play-card host-card session-side-card" title="Host Controls">
@@ -542,7 +570,7 @@ const SessionWaitingRoom: React.FC = () => {
               className="session-filter-form"
               initialValues={{
                 rounds: 5,
-                timePerRound: 30,
+                timePerRound: 15,
                 minRating: 0,
                 releaseYear: "any",
               }}
@@ -582,7 +610,7 @@ const SessionWaitingRoom: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
-                  {joinedUsers} people have joined
+                  {joinedUsers} {joinedUsers === 1 ? "person has" : "people have"} joined
                 </Typography.Text>
                 <Button
                   shape="circle"
@@ -607,7 +635,7 @@ const SessionWaitingRoom: React.FC = () => {
                   <Button className="start-session-btn" block loading={isStarting} onClick={handleStartSession}>
                     Start Session
                   </Button>
-                  <Button className="end-session-btn" block onClick={() => handleLeave()}>
+                  <Button className="end-session-btn" block loading={isStarting} onClick={handleConfirmLeave}>
                     End Session
                   </Button>
                 </>

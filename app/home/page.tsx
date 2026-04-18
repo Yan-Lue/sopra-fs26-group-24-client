@@ -35,6 +35,15 @@ const Home: React.FC = () => {
         messageApi.error(errorMsg);
       }, 0);
     }
+
+    const infoMsg = sessionStorage.getItem("redirectInfo");
+    // safety pattern to ensure messages are shown after render
+    if (infoMsg) {
+      sessionStorage.removeItem("redirectInfo");
+      setTimeout(() => {
+        messageApi.info(infoMsg);
+      }, 0);
+    }
   }, [messageApi, router]);
 
   // same as with navbar
@@ -58,15 +67,12 @@ const Home: React.FC = () => {
     router.push("/history");
   };
 
-  if (!isAuthorized) {
-    return null;
-  }
-
   return (
     <>
       {contextHolder}
-      <div className="page-with-nav">
-        <Navbar />
+      {!isAuthorized ? null : (
+        <div className="page-with-nav">
+          <Navbar />
 
         <div className="home-container">
           <div className="home-intro">
@@ -97,6 +103,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </>
   );
 };

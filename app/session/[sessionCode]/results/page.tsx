@@ -67,6 +67,7 @@ const [isGuest, setIsGuest] = useState(false);
 const [isHistorySaved, setIsHistorySaved] = useState(false);
 const [isModalVisible, setIsModalVisible] = useState(false);
 const [createForm] = Form.useForm<CreateSessionFormValues>();
+const [modal, contextHolderModal] = Modal.useModal();
 
 const getPosterUrl = (posterPath: string): string => {
     if (!posterPath) return "";
@@ -178,12 +179,30 @@ const handleLeaveSession = () => {
   router.replace("/home");
 };
 
+const handleConfirmLeave = () => {
+  modal.confirm({
+    className: "leave-session-confirm-modal",
+    title: "Do you really want to end the session?",
+    content: "You will be redirected to the home page.",
+    okText: "Yes, leave",
+    cancelText: "No, stay",
+    onOk: async () => {
+      sessionStorage.setItem(
+        "redirectInfo",
+        "You successfully ended the session."
+      );
+      handleLeaveSession();
+    },
+  });
+};
+
 const moviesSortedByScore = [...movieResults].sort((a, b) => b.score - a.score);
 
 if (loading) {
     return (
     <div className="page-with-nav">
         {contextHolder}
+        {contextHolderModal}
         <div className="play-container host-loading-wrap">
         <Spin size="large" />
         </div>
@@ -198,6 +217,7 @@ if (!isAuthorized) {
 return (
     <div className="page-with-nav">
       {contextHolder}
+      {contextHolderModal}
 
       <div className="results-container">
         <div className="results-header-row">
@@ -374,7 +394,7 @@ return (
             <Button
               size="large"
               className="leave-session-btn"
-              onClick={handleLeaveSession}
+              onClick={handleConfirmLeave}
             >
               Leave Session
             </Button>
