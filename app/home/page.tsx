@@ -85,14 +85,14 @@ const Home: React.FC = () => {
           )}
 
           <div className="home-actions">
-            <Card hoverable className="home-action-card" onClick={handleHistoryCardClick}>
-              <Title>History</Title>
-              <Paragraph>See your latest saved results here.</Paragraph>
-            </Card>
-
             <Card hoverable className="home-action-card" onClick={() => router.push("/play")}>
               <Title>Play</Title>
               <Paragraph>Click here to create a new session or to join your friends.</Paragraph>
+            </Card>
+            
+            <Card hoverable className="home-action-card" onClick={handleHistoryCardClick}>
+              <Title>History</Title>
+              <Paragraph>See your latest saved results here.</Paragraph>
             </Card>
           </div>
         </div>
