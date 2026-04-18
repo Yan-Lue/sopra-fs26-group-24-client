@@ -359,7 +359,10 @@ const SessionWaitingRoom: React.FC = () => {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
       if (token) {
         try {
-          await apiService.delete(`/session/${sessionCode}`, { token });
+          await fetch(`${getApiDomain()}/session/${sessionCode}`, {
+            method: "DELETE",
+            headers: { "Authorization": token },
+          });
         } catch (e) {
           console.error("Failed to cleanly leave session:", e);
         }
