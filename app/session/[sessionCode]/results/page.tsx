@@ -3,7 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Modal, Select, Spin, Typography, message } from "antd";
+import { Button, Card, Collapse, Form, Input, Modal, Select, Spin, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -23,6 +23,14 @@ sessionToken: string;
 hostId: number;
 }
 
+interface SimilarMovieDTO {
+movieId: number;
+title: string;
+posterPath?: string;
+rating?: number;
+releaseDate?: string;
+}
+
 interface MovieResultDTO {
 movieId: number;
 title: string;
@@ -31,7 +39,7 @@ posterPath: string;
 rating?: number;
 releaseDate?: string;
 genres?: string[];
-similarMovies?: unknown[];
+similarMovies?: SimilarMovieDTO[];
 score: number;
 likes?: number;
 dislikes?: number;
@@ -79,6 +87,9 @@ useEffect(() => {
         }
 
         setIsGuest(token.startsWith("Guest-"));
+
+        const historyKey = `historySaved:${routeSessionCode}:${parsedUserId}`;
+        setIsHistorySaved(localStorage.getItem(historyKey) === "true");
 
         const storedHostIdRaw = parseStorageValue<string | number>(localStorage.getItem("hostId"));
         const storedHostId = Number(storedHostIdRaw);
@@ -270,6 +281,61 @@ return (
                                 </span>
                                 ))}
                             </div>
+
+                            <Collapse
+                              ghost
+                              size="small"
+                              className="result-similar-collapse"
+                              items={[
+                                {
+                                  key: "similar-" + movie.movieId,
+                                  label: `Similar movies (${movie.similarMovies?.length ?? 0})`,
+                                  children:
+                                    movie.similarMovies && movie.similarMovies.length > 0 ? (
+                                      <div className="similar-movies-list">
+                                        {movie.similarMovies.map((similar) => {
+                                          const similarPoster = similar.posterPath
+                                            ? getPosterUrl(similar.posterPath)
+                                            : "";
+
+                                          return (
+                                            <div key={similar.movieId} className="similar-movie-item">
+                                              {similarPoster ? (
+                                                <img
+                                                  src={similarPoster}
+                                                  alt={similar.title}
+                                                  className="similar-movie-poster"
+                                                />
+                                              ) : (
+                                                <div className="similar-movie-poster-placeholder">No poster</div>
+                                              )}
+
+                                              <div className="similar-movie-info">
+                                                <Typography.Text className="similar-movie-title">
+                                                  {similar.title}
+                                                </Typography.Text>
+                                                <Typography.Text className="similar-movie-meta">
+                                                  {similar.rating
+                                                    ? `Rating: ${similar.rating.toFixed(1)}`
+                                                    : "No rating"}{" "}
+                                                  •{" "}
+                                                  {similar.releaseDate
+                                                    ? similar.releaseDate.slice(0, 4)
+                                                    : "Unknown year"}
+                                                </Typography.Text>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <Typography.Text type="secondary">
+                                        No similar movies available.
+                                      </Typography.Text>
+                                    ),
+                                },
+                              ]}
+                            />
                             </div>
                         </div>
                     </div>

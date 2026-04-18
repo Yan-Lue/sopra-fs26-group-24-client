@@ -202,34 +202,45 @@ const VotePage: React.FC = () => {
   }, [apiService, messageApi, routeSessionCode, router]);
 
   // Auto-advance to next movie after timePerRound seconds
-  useEffect(() => {
-    if (!movie || isLoading) return;
-    if (!timePerRound || timePerRound <= 0) return;
+  // 1. Reset the numeric state whenever a new movie arrives
+  // Unified Timer Logic
+useEffect(() => {
+  // 1. Guard clauses
+  if (!movie || isLoading || !timePerRound || timePerRound <= 0) {
+    return;
+  }
 
-    const currentMovieId = getMovieId(movie);
-    if (currentMovieId === lastMovieIdRef.current) return;
+  const currentMovieId = getMovieId(movie);
 
+  // 2. Reset the time whenever the movie ID actually changes
+  if (currentMovieId !== lastMovieIdRef.current) {
     lastMovieIdRef.current = currentMovieId;
     setTimeRemaining(timePerRound);
-  }, [movie, isLoading, timePerRound]);
+  }
 
-  // Start countdown timer
-  useEffect(() => {
-    if (!timePerRound || timePerRound <= 0) return;
-
-    const countdownInterval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
+  // 3. Start the interval
+  const intervalId = setInterval(() => {
+    setTimeRemaining((prev) => {
+      // If we've reached the end
+      if (prev <= 1) {
+        clearInterval(intervalId);
+        
+        // Host triggers the transition
+        if (isHost && !isAdvancingRef.current) {
           void advanceToNextMovie();
-          return 0;
         }
-        return prev - 1;
-      });
-    }, 1000);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
 
-    return () => clearInterval(countdownInterval);
-  }, [timePerRound]);
+  // 4. Cleanup: This is crucial. It clears the timer when the movie changes
+  // or the component unmounts, preventing "phantom" timers.
+  return () => clearInterval(intervalId);
+
+}, [movie, isLoading, timePerRound, isHost]); 
+// 'movie' is the key dependency here to restart the clock
 
   const advanceToNextMovie = async () => {
     if (!isHost || isAdvancingRef.current) {
@@ -319,7 +330,7 @@ const VotePage: React.FC = () => {
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
-  const isWaitingForNextMovie = hasVotedCurrentMovie && !isSubmittingVote;
+  const isWaitingForNextMovie = (hasVotedCurrentMovie || timeRemaining <= 0) && !isSubmittingVote;
 
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
