@@ -3,7 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
-import { CopyOutlined } from "@ant-design/icons";
+import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Form, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ interface SessionResponse {
   sessionToken: string;
   hostId: number;
   joinedUsers?: number;
+  usernames?: string[];
   sessionName?: string;
 }
 
@@ -42,6 +43,7 @@ interface SessionFilterPutDTO {
 interface LobbyUpdate {
   joinedUsers: number;
   maxPlayers: number;
+  usernames?: string[];
 }
 
 interface MovieGetDTO {
@@ -97,12 +99,14 @@ const SessionWaitingRoom: React.FC = () => {
   const [isHost, setIsHost] = useState(false);
   const [sessionCode, setSessionCode] = useState<string | undefined>(routeSessionCode);
   const [joinedUsers, setJoinedUsers] = useState(0);
+  const [joinedUsernames, setJoinedUsernames] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [isStarting, setIsStarting] = useState(false);
   const hasRedirectedRef = useRef(false);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
+  const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
 
   const [filterForm] = Form.useForm<FilterFormValues>();
@@ -111,20 +115,20 @@ const SessionWaitingRoom: React.FC = () => {
     () =>
       Array.from({ length: 13 }, (_, i) => {
         const value = i + 3;
-        return { value, label: `${value}` }  ;
+        return { value, label: `${value}` };
       }),
     [],
   );
 
   // helper function to handle correct redirect
   const redirectToVoteWithMovie = (movie: MovieGetDTO) => {
-      if (!sessionCode || hasRedirectedRef.current) return;
+    if (!sessionCode || hasRedirectedRef.current) return;
 
-      hasRedirectedRef.current = true;
-      sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
+    hasRedirectedRef.current = true;
+    sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
 
-      router.replace(`/session/${sessionCode}/vote`);
-    };
+    router.replace(`/session/${sessionCode}/vote`);
+  };
 
   useEffect(() => {
     const verifySessionAccess = async () => {
@@ -145,6 +149,18 @@ const SessionWaitingRoom: React.FC = () => {
         const cachedSessionCode = routeSessionCode;
         setSessionCode(cachedSessionCode);
         setJoinedUsers(Number(sessionStorage.getItem(`joinedUsers:${cachedSessionCode}`) ?? "1"));
+
+        const storedHostId = parseStorageValue<string | number>(localStorage.getItem("hostId"));
+        const storedSessionCode = localStorage.getItem("sessionCode");
+        if (storedSessionCode === routeSessionCode && storedHostId !== null && Number(storedHostId) === parsedUserId) {
+          setIsHost(true);
+        }
+
+        const storedUsernames = sessionStorage.getItem(`joinedUsernames:${cachedSessionCode}`);
+        if (storedUsernames) {
+          setJoinedUsernames(JSON.parse(storedUsernames));
+        }
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -162,6 +178,12 @@ const SessionWaitingRoom: React.FC = () => {
         setSessionCode(routeSessionCode);
         setIsHost(true);
         setJoinedUsers(1);
+
+        const storedUsernamesHost = sessionStorage.getItem(`joinedUsernames:${routeSessionCode}`);
+        if (storedUsernamesHost) {
+          setJoinedUsernames(JSON.parse(storedUsernamesHost));
+        }
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -184,7 +206,12 @@ const SessionWaitingRoom: React.FC = () => {
         const actualCount = session.joinedUsers ?? 1;
         sessionStorage.setItem(`joinedUsers:${session.sessionCode}`, String(actualCount));
         setJoinedUsers(actualCount);
-        
+
+        if (session.usernames) {
+          setJoinedUsernames(session.usernames);
+          sessionStorage.setItem(`joinedUsernames:${session.sessionCode}`, JSON.stringify(session.usernames));
+        }
+
         setIsValid(true);
       } catch (error) {
         console.error("Failed to verify session access:", error);
@@ -221,10 +248,22 @@ const SessionWaitingRoom: React.FC = () => {
                 setJoinedUsers(payload.joinedUsers);
                 sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(payload.joinedUsers));
               }
+              if (payload.usernames) {
+                setJoinedUsernames(payload.usernames);
+                sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(payload.usernames));
+              }
             } catch (error) {
               //console.error("Failed to parse lobby update:", error);
               messageApi.error("A user left or joined, but the update could not be processed.");
             }
+          },
+        );
+
+        client.subscribe(
+          `/topic/session/${sessionCode}/end`,
+          () => {
+            messageApi.info("The host has ended the session.");
+            leaveLocally();
           },
         );
 
@@ -274,13 +313,13 @@ const SessionWaitingRoom: React.FC = () => {
           `/session/${sessionCode}/current`
         );
 
-      if (isCancelled || hasRedirectedRef.current) return;
+        if (isCancelled || hasRedirectedRef.current) return;
         redirectToVoteWithMovie(current);
       } catch (error) {
         const apiError = error as { status?: number };
         if (apiError?.status === 409) {
-        return;
-      }
+          return;
+        }
         if (apiError?.status === 404) {
           return;
         }
@@ -289,14 +328,14 @@ const SessionWaitingRoom: React.FC = () => {
 
     void pollCurrentMovie();
     const intervalId = window.setInterval(() => {
-    void pollCurrentMovie();
+      void pollCurrentMovie();
     }, 1500);
 
     return () => {
-    isCancelled = true;
-    window.clearInterval(intervalId);
+      isCancelled = true;
+      window.clearInterval(intervalId);
     };
-}, [apiService, isHost, isValid, sessionCode]);
+  }, [apiService, isHost, isValid, sessionCode]);
 
   // update DTO when new genres are selected or deselected, so that backend can build the session filters
   const handleGenreToggle = (genre: string, checked: boolean) => {
@@ -310,50 +349,67 @@ const SessionWaitingRoom: React.FC = () => {
       return next;
     });
   };
-
-  const handleLeave = () => {
+  //needed, because if host ends session, the client is not correctly redirected to home and triggers infinite loop.
+  const leaveLocally = () => {
     if (sessionCode) {
       clearSessionClientState(sessionCode);
     }
     router.replace("/home");
   };
 
-  const handleCopySessionLink = async () => {
-  try {
-    await navigator.clipboard.writeText(window.location.href);
-    messageApi.success("Session link copied.");
-  } catch (error) {
-    console.error("Failed to copy session link:", error);
-    messageApi.error("Could not copy link. Please copy from browser address bar.");
-  }
-};
-
-// take values from form, build DTO and send to backend to build session filters
-const buildSessionFilterDTO = (
-  values: FilterFormValues,
-  genres: string[],
-): SessionFilterPutDTO => {
-  const dto: SessionFilterPutDTO = {
-    roundLimit: values.rounds,
-    timePerRound: values.timePerRound,
+  const handleLeave = async () => {
+    if (sessionCode) {
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      if (token) {
+        try {
+          await fetch(`${getApiDomain()}/session/${sessionCode}`, {
+            method: "DELETE",
+            headers: { "Authorization": token },
+          });
+        } catch (e) {
+          console.error("Failed to cleanly leave session:", e);
+        }
+      }
+    }
+    leaveLocally();
   };
 
-  if (genres.length > 0) {
-    dto.genres = genres;
-  }
+  const handleCopySessionLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      messageApi.success("Session link copied.");
+    } catch (error) {
+      console.error("Failed to copy session link:", error);
+      messageApi.error("Could not copy link. Please copy from browser address bar.");
+    }
+  };
 
-  if (typeof values.minRating === "number" && values.minRating > 0) {
-    dto.minRating = values.minRating;
-  }
+  // take values from form, build DTO and send to backend to build session filters
+  const buildSessionFilterDTO = (
+    values: FilterFormValues,
+    genres: string[],
+  ): SessionFilterPutDTO => {
+    const dto: SessionFilterPutDTO = {
+      roundLimit: values.rounds,
+      timePerRound: values.timePerRound,
+    };
 
-  if (values.releaseYear && values.releaseYear !== "any") {
-    dto.releaseYear = Number(values.releaseYear);
-  }
+    if (genres.length > 0) {
+      dto.genres = genres;
+    }
 
-  return dto;
-};
+    if (typeof values.minRating === "number" && values.minRating > 0) {
+      dto.minRating = values.minRating;
+    }
 
-const handleStartSession = async () => {
+    if (values.releaseYear && values.releaseYear !== "any") {
+      dto.releaseYear = Number(values.releaseYear);
+    }
+
+    return dto;
+  };
+
+  const handleStartSession = async () => {
     if (!isHost || !sessionCode) return;
 
     try {
@@ -389,7 +445,7 @@ const handleStartSession = async () => {
   if (isLoading) {
     return (
       <div className="page-with-nav">
-        
+
         <div className="play-container host-loading-wrap">
           <Spin size="large" />
         </div>
@@ -524,9 +580,17 @@ const handleStartSession = async () => {
                 </Button>
               </div>
 
-              <Typography.Text className="host-meta-line">
-                {joinedUsers} people have joined
-              </Typography.Text>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
+                  {joinedUsers} people have joined
+                </Typography.Text>
+                <Button
+                  shape="circle"
+                  icon={<UserOutlined />}
+                  onClick={() => setShowJoinedUsers((prev) => !prev)}
+                  aria-label="Toggle Joined Users"
+                />
+              </div>
 
               <div className="host-loading-wrap">
                 <Spin size="large" />
@@ -543,18 +607,34 @@ const handleStartSession = async () => {
                   <Button className="start-session-btn" block loading={isStarting} onClick={handleStartSession}>
                     Start Session
                   </Button>
-                  <Button className="end-session-btn" block onClick={handleLeave}>
+                  <Button className="end-session-btn" block onClick={() => handleLeave()}>
                     End Session
                   </Button>
                 </>
               ) : (
-                <Button className="leave-session-btn" onClick={handleLeave}>
+                <Button className="leave-session-btn" onClick={() => handleLeave()}>
                   Leave Session
                 </Button>
               )}
             </div>
           </div>
         </Card>
+
+        {showJoinedUsers && (
+          <Card className="play-card session-side-card" title="Joined Users">
+            <div className="participant-settings">
+              {joinedUsernames.length > 0 ? (
+                joinedUsernames.map((username, i) => (
+                  <Typography.Text key={i} className="host-meta-line" style={{ display: "block" }}>
+                    {username}
+                  </Typography.Text>
+                ))
+              ) : (
+                <Typography.Text className="host-meta-line">No users have joined</Typography.Text>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
