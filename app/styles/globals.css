@@ -124,6 +124,26 @@ a {
   flex: 0 1 420px;
   width: 100%;
   max-width: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.play-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: auto;
+}
+
+.play-card .ant-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.play-card .ant-form .ant-form-item:last-child {
+  margin-top: auto;
+  margin-bottom: 0;
 }
 
 .play-container {
@@ -132,7 +152,6 @@ a {
   justify-content: center;
   align-items: stretch;
   flex-wrap: wrap;
-  min-height: 85vh;
   padding: 36px;
   background-color: var(--background);
 }
@@ -603,6 +622,14 @@ color: var(--background) !important;
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.22) !important;
 }
 
+.profile-fields .profile-input.ant-input[disabled],
+.profile-fields .profile-input.ant-input-affix-wrapper-disabled,
+.profile-fields .profile-input.ant-input-affix-wrapper-disabled .ant-input,
+.profile-fields .profile-textarea.ant-input-textarea textarea[disabled],
+.profile-fields .ant-input-password .ant-input[disabled] {
+  cursor: default !important;
+}
+
 /* Logout Button Styles */
 .logout-button.ant-btn {
   background: var(--primary-gold) !important;
@@ -663,8 +690,10 @@ text-align: center;
 align-items: center;
 }
 
-.vote-waiting-title.ant-typography {
-margin: 0 !important;
+.vote-waiting-title.ant-typography, 
+.vote-saved-text.ant-typography {
+  margin: 0 !important;
+  color: var(--text) !important;
 }
 
 .vote-screen {
@@ -728,50 +757,65 @@ font-size: 15px;
 }
 
 .vote-actions {
-width: 100%;
-max-width: 330px;
-display: flex;
-justify-content: center;
-align-items: center;
-gap: 16px;
-padding-top: 6px;
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding-top: 10px;
 }
 
 .vote-action-button.ant-btn {
-width: 60px;
-height: 60px;
-border-radius: 999px;
-font-size: 22px;
-font-weight: 700;
-border-width: 2px;
-box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
-transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1 !important;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.24);
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.vote-action-button.ant-btn .ant-btn-icon,
+.vote-action-button.ant-btn .anticon {
+  color: #ffffff !important;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .vote-action-button.ant-btn:hover {
-transform: translateY(-2px) scale(1.03);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+  filter: brightness(1.03);
 }
 
 .vote-action-button.ant-btn:active {
-transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.98);
+}
+
+.vote-action-button.ant-btn:disabled {
+  opacity: 1;
+  filter: none;
 }
 
 .vote-action-x.ant-btn {
-background: rgba(255, 77, 79, 0.12) !important;
-border-color: rgba(255, 77, 79, 0.8) !important;
-color: #ff7875 !important;
+  background: #e34a44 !important;
 }
 
 .vote-action-skip.ant-btn {
-background: rgba(212, 175, 55, 0.12) !important;
-border-color: var(--primary-gold) !important;
-color: var(--primary-gold) !important;
+  background: #a3a9b6 !important;
 }
 
 .vote-action-heart.ant-btn {
-background: rgba(82, 196, 26, 0.12) !important;
-border-color: #52c41a !important;
-color: #52c41a !important;
+  background: #56c35c !important;
 }
 
 /* Results Page Styles */
@@ -1130,7 +1174,9 @@ color: #52c41a !important;
   color: var(--primary-gold) !important;
 }
 
-.start-new-round-modal .ant-modal-content {
+/* Modal Styles */
+.start-new-round-modal .ant-modal-content, 
+.leave-session-confirm-modal .ant-modal-content {
   background: var(--card) !important;
   border: 1px solid var(--secondary) !important;
 }
@@ -1142,6 +1188,49 @@ color: #52c41a !important;
 .start-new-round-modal .ant-modal-close:hover {
   color: var(--primary-gold) !important;
   background: rgba(212, 175, 55, 0.12) !important;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn {
+  min-width: 140px;
+  height: 40px;
+  border-radius: 10px !important;
+  font-weight: 700;
+  box-shadow: none !important;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-default {
+  background: rgba(212, 175, 55, 0.14) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-primary {
+  background: rgba(255, 77, 79, 0.92) !important;
+  border-color: rgba(255, 77, 79, 0.92) !important;
+  color: var(--background) !important;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-default:hover,
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-default:focus {
+  background: rgba(212, 175, 55, 0.24) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+}
+
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-primary:hover,
+.leave-session-confirm-modal .ant-modal-confirm-btns .ant-btn-primary:focus {
+  background: rgba(255, 77, 79, 1) !important;
+  border-color: rgba(255, 77, 79, 1) !important;
+  color: var(--background) !important;
 }
 
 .create-session-btn.ant-btn {

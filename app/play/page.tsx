@@ -133,6 +133,7 @@ const Play: React.FC = () => {
       if (session.usernames) {
         sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(session.usernames));
       }
+      sessionStorage.setItem('sessionName', trimmedSessionName);
 
       router.push(`/session/${sessionCode}`);
     } catch (error) {

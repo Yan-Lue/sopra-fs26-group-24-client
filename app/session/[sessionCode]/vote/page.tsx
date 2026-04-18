@@ -3,6 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
 import { parseStorageValue } from "@/utils/storage";
+import { CloseOutlined, HeartFilled, MinusOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
@@ -406,23 +407,6 @@ useEffect(() => {
             <div className="host-loading-wrap vote-loading-wrap">
               <Spin size="large" />
             </div>
-          ) : isWaitingForNextMovie ? (
-            <div className="host-loading-wrap vote-waiting-wrap">
-              <Space orientation="vertical" size={12} className="vote-waiting-stack">
-                <Spin size="large" />
-                <Typography.Title level={3} className="vote-waiting-title">
-                  Waiting for other players...
-                </Typography.Title>
-                <Typography.Text type="secondary">
-                  Your vote is saved.
-                </Typography.Text>
-                {timeRemaining > 0 && (
-                  <Typography.Text strong>
-                    Next movie in {timeRemaining} seconds
-                  </Typography.Text>
-                )}
-              </Space>
-            </div>
           ) : (
             <div className="vote-screen">
               <div className="vote-poster-wrap">
@@ -453,7 +437,7 @@ useEffect(() => {
 
                 <Space size={[8, 8]} wrap className="vote-meta-row">
                   {movie.genres?.map((genre) => (
-                    <Tag key={genre}>{genre}</Tag>
+                    <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}
                 </Space>
 
@@ -464,28 +448,66 @@ useEffect(() => {
 
               <Divider />
 
-              <div className="vote-actions">
-                <Button shape="circle" size="large" danger disabled={isSubmittingVote || hasVotedCurrentMovie} onClick={() => void handleVoteClick("x")} className="vote-action-button vote-action-x">
-                    ✕
-                </Button>
-
-                <Button shape="circle" size="large" disabled={isSubmittingVote || hasVotedCurrentMovie} onClick={() => void handleVoteClick("skip")} className="vote-action-button vote-action-skip">
-                    -
-                </Button>
-
-                <Button shape="circle" size="large" type="primary" disabled={isSubmittingVote || hasVotedCurrentMovie} onClick={() => void handleVoteClick("heart")} className="vote-action-button vote-action-heart">
-                    ♥
-                </Button>
+              {isWaitingForNextMovie ? (
+                <div className="vote-bottom-waiting">
+                  <Space orientation="vertical" size={12} className="vote-waiting-stack">
+                    <Typography.Title level={4} className="vote-waiting-title">
+                      Your vote has been submitted!
+                    </Typography.Title>
+                    <Typography.Text className="vote-saved-text">
+                      Waiting for other participants to vote...
+                    </Typography.Text>
+                    {timeRemaining > 0 && (
+                      <Typography.Text strong>
+                        Next movie in {timeRemaining} seconds
+                      </Typography.Text>
+                    )}
+                  </Space>
                 </div>
+              ) : (
+                <>
+                  <div className="vote-actions">
+                    <Button
+                      shape="circle"
+                      size="large"
+                      disabled={isSubmittingVote || hasVotedCurrentMovie}
+                      onClick={() => void handleVoteClick("x")}
+                      className="vote-action-button vote-action-x"
+                      icon={<CloseOutlined />}
+                      aria-label="Dislike"
+                    />
 
-              <div className="vote-waiting-message">
-                {isSubmittingVote ? (
-                  <>
-                    <Spin size="small" />
-                    <Typography.Text>Submitting your vote...</Typography.Text>
-                  </>
-                ) : null}
-              </div>
+                    <Button
+                      shape="circle"
+                      size="large"
+                      disabled={isSubmittingVote || hasVotedCurrentMovie}
+                      onClick={() => void handleVoteClick("skip")}
+                      className="vote-action-button vote-action-skip"
+                      icon={<MinusOutlined />}
+                      aria-label="Skip"
+                    />
+
+                    <Button
+                      shape="circle"
+                      size="large"
+                      disabled={isSubmittingVote || hasVotedCurrentMovie}
+                      onClick={() => void handleVoteClick("heart")}
+                      className="vote-action-button vote-action-heart"
+                      icon={<HeartFilled />}
+                      aria-label="Like"
+                    />
+                  </div>
+
+                  <div className="vote-waiting-message">
+                    {isSubmittingVote ? (
+                      <>
+                        <Spin size="small" />
+                        <Typography.Text>Submitting your vote...</Typography.Text>
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </Card>
