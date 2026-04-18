@@ -203,47 +203,44 @@ const VotePage: React.FC = () => {
 
   // Auto-advance to next movie after timePerRound seconds
   // 1. Reset the numeric state whenever a new movie arrives
-  useEffect(() => {
-    if (!movie || isLoading || !timePerRound) return;
+  // Unified Timer Logic
+useEffect(() => {
+  // 1. Guard clauses
+  if (!movie || isLoading || !timePerRound || timePerRound <= 0) {
+    return;
+  }
 
-    const currentMovieId = getMovieId(movie);
-    
-    // Only reset if it's actually a different movie
-    if (currentMovieId !== lastMovieIdRef.current) {
-      // Store the ID of the current movie to compare on the next update
-      lastMovieIdRef.current = currentMovieId;
-      setTimeRemaining(timePerRound);
-    }
-  }, [movie, isLoading, timePerRound]);
+  const currentMovieId = getMovieId(movie);
 
-  // 2. The Countdown Heartbeat
-  useEffect(() => {
-    // If no time is set, don't start the clock
-    if (!timePerRound || timePerRound <= 0) return;
+  // 2. Reset the time whenever the movie ID actually changes
+  if (currentMovieId !== lastMovieIdRef.current) {
+    lastMovieIdRef.current = currentMovieId;
+    setTimeRemaining(timePerRound);
+  }
 
-
-    // countdownInterval will get an ID that we can then use to clear
-    const countdownInterval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          
-          // CRITICAL: Only the host triggers the API to move everyone to the next movie
-          if (isHost && !isAdvancingRef.current) {
-            void advanceToNextMovie();
-          }
-          return 0;
+  // 3. Start the interval
+  const intervalId = setInterval(() => {
+    setTimeRemaining((prev) => {
+      // If we've reached the end
+      if (prev <= 1) {
+        clearInterval(intervalId);
+        
+        // Host triggers the transition
+        if (isHost && !isAdvancingRef.current) {
+          void advanceToNextMovie();
         }
-        return prev - 1;
-      });
-    }, 1000);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
 
-    // This cleanup function runs every time the 'movie' changes,
-    // the old timer is gone and a new one can start.
-    return () => clearInterval(countdownInterval);
-    
-    // Adding 'movie' here is what prevents the "freeze"
-  }, [movie, timePerRound, isHost]);
+  // 4. Cleanup: This is crucial. It clears the timer when the movie changes
+  // or the component unmounts, preventing "phantom" timers.
+  return () => clearInterval(intervalId);
+
+}, [movie, isLoading, timePerRound, isHost]); 
+// 'movie' is the key dependency here to restart the clock
 
   const advanceToNextMovie = async () => {
     if (!isHost || isAdvancingRef.current) {
