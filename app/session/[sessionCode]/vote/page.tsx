@@ -330,7 +330,7 @@ useEffect(() => {
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
-  const isWaitingForNextMovie = hasVotedCurrentMovie && !isSubmittingVote;
+  const isWaitingForNextMovie = (hasVotedCurrentMovie || timeRemaining <= 0) && !isSubmittingVote;
 
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
