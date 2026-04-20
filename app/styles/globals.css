@@ -754,6 +754,8 @@ color: var(--text) !important;
 color: rgba(245, 230, 211, 0.92) !important;
 line-height: 1.55;
 font-size: 15px;
+text-align: justify;
+hyphens: auto;
 }
 
 .vote-actions {

@@ -36,7 +36,6 @@ export default function RootLayout({
                 colorTextLightSolid: "#1a0a0f",
                 controlHeight: 38,
                 primaryShadow: "none",
-                fontWeight: 700,
               },
               Input: {
                 colorBorder: "#4a1f2b",
