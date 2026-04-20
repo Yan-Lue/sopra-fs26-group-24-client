@@ -1,0 +1,87 @@
+.scene {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10000;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.85);
+  transition: visibility 0s 5s, opacity 1s 4s, background-color 4s 0.85s ease-in-out;
+}
+
+.scene.closed {
+  visibility: visible;
+  opacity: 1;
+}
+
+.scene.open {
+  visibility: hidden;
+  opacity: 0;
+  background-color: rgba(0, 0, 0, 0);
+  pointer-events: none;
+}
+
+.curtainLeft,
+.curtainRight {
+  position: absolute;
+  top: 0;
+  width: 50vw;
+  height: 105vh;
+  background-color: var(--secondary);
+  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/950358/curtain.svg");
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: multiply;
+  filter: brightness(0.8) contrast(1.2);
+  transition: transform 2.5s cubic-bezier(0.64, 0.04, 0.35, 1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.curtainLeft {
+  left: 0;
+  transform-origin: left top;
+}
+
+.curtainRight {
+  right: 0;
+  transform-origin: right top;
+}
+
+.open .curtainLeft {
+  transform: translateX(-100%) skewX(-25deg);
+}
+
+.open .curtainRight {
+  transform: translateX(100%) skewX(25deg);
+}
+
+.enterButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--primary-gold);
+  color: var(--background);
+  border: none;
+  padding: 16px 40px;
+  font-size: 28px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  z-index: 10001;
+  transition: opacity 0.5s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+}
+
+.enterButton:hover {
+  transform: translate(-50%, -52%);
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.8);
+  background-color: var(--accent);
+}
+
+.open .enterButton {
+  opacity: 0;
+  pointer-events: none;
+}

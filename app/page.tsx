@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Typography, theme } from "antd";
 import {
@@ -7,12 +8,14 @@ import {
   PlayCircleOutlined 
 } from "@ant-design/icons";
 import styles from "@/styles/page.module.css";
+import CurtainIntro from "./components/CurtainIntro";
 
 const { Title } = Typography;
 
 export default function Home() {
   const router = useRouter();
   const { token } = theme.useToken(); 
+  const [showIntro, setShowIntro] = useState(true);
 
   const sectionStyle = {
   width: "100%",
@@ -21,8 +24,10 @@ export default function Home() {
 };
 
   return (
-    <div className={styles.page} style={sectionStyle}>
-      <main className={styles.landing}>
+    <>
+      {showIntro && <CurtainIntro onComplete={() => setShowIntro(false)} />}
+      <div className={styles.page} style={sectionStyle}>
+        <main className={styles.landing}>
 
         <Typography style={{ textAlign: "center"}}>
           <Title level={1} style={{ color: "black" }}>
@@ -55,5 +60,6 @@ export default function Home() {
 
       
     </div>
+    </>
   );
 }
