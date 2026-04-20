@@ -433,9 +433,6 @@ useEffect(() => {
                   <Tag color="blue">
                     {movie.releaseDate ? movie.releaseDate.slice(0, 4) : "Unknown year"}
                   </Tag>
-                </Space>
-
-                <Space size={[8, 8]} wrap className="vote-meta-row">
                   {movie.genres?.map((genre) => (
                     <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}

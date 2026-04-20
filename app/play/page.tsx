@@ -128,12 +128,13 @@ const Play: React.FC = () => {
 
       // Mark the creator as already joined so the waiting room does not try to
       // register the host again and hit the session capacity check.
-      sessionStorage.setItem(`joinedSession:${sessionCode}`, `${hostId}:${localStorage.getItem("token") ?? ""}`);
+      const token = parseStorageValue<string>(localStorage.getItem("token")) ?? "";
+      sessionStorage.setItem(`joinedSession:${sessionCode}`, `${hostId}:${token}`);
       sessionStorage.setItem(`joinedUsers:${sessionCode}`, "1");
       if (session.usernames) {
         sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(session.usernames));
       }
-      sessionStorage.setItem('sessionName', trimmedSessionName);
+      sessionStorage.setItem(`sessionName:${sessionCode}`, trimmedSessionName);
 
       router.push(`/session/${sessionCode}`);
     } catch (error) {

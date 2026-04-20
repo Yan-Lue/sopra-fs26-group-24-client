@@ -163,7 +163,11 @@ const SessionWaitingRoom: React.FC = () => {
           setJoinedUsernames(JSON.parse(storedUsernames));
         }
 
-        setSessionName(sessionStorage.getItem('sessionName') ?? "Session");
+        setSessionName(
+          sessionStorage.getItem(`sessionName:${routeSessionCode}`) ??
+          sessionStorage.getItem('sessionName') ??
+          "Session"
+        );
 
         setIsValid(true);
         setIsLoading(false);
@@ -188,6 +192,12 @@ const SessionWaitingRoom: React.FC = () => {
           setJoinedUsernames(JSON.parse(storedUsernamesHost));
         }
 
+        setSessionName(
+          sessionStorage.getItem(`sessionName:${routeSessionCode}`) ??
+          sessionStorage.getItem('sessionName') ??
+          "Session"
+        );
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -201,7 +211,10 @@ const SessionWaitingRoom: React.FC = () => {
       try {
         const session = await apiService.put<SessionResponse>(`/session/${routeSessionCode}`, payload);
 
-        setSessionName(session.sessionName ?? "Session");
+        const resolvedName = session.sessionName ?? "Session";
+        setSessionName(resolvedName);
+        sessionStorage.setItem(`sessionName:${session.sessionCode}`, resolvedName);
+        
         setSessionCode(session.sessionCode);
         setIsHost(session.hostId === parsedUserId);
         localStorage.setItem("hostId", session.hostId.toString());

@@ -32,5 +32,6 @@ export const clearSessionClientState = (sessionCode: string) => {
   sessionStorage.removeItem(`currentMovie:${sessionCode}`);
   sessionStorage.removeItem(`votedMovieIds:${sessionCode}`);
   sessionStorage.removeItem(`joinedUsernames:${sessionCode}`);
+  sessionStorage.removeItem(`sessionName:${sessionCode}`);
   sessionStorage.removeItem(`sessionName`);
 };
