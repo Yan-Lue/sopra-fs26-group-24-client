@@ -171,3 +171,11 @@
   opacity: 0;
   pointer-events: none;
 }
+
+/* small screens */
+@media (max-width: 480px) {
+  .enterButton {
+    font-size: 20px;
+    padding: 12px 28px;
+  }
+}

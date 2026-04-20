@@ -18,10 +18,13 @@ export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
 
   const sectionStyle = {
-  width: "100%",
-  height: "400px",
-  backgroundImage: "url('/Background.png')",
-};
+    width: "100%",
+    minHeight: "100vh",
+    backgroundImage: "url('/Background.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+  };
 
   return (
     <>

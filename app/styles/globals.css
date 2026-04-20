@@ -1366,3 +1366,393 @@ hyphens: auto;
   border-color: var(--accent) !important;
   color: var(--accent) !important;
 }
+
+/* ================================================================
+   RESPONSIVE: Medium screens (laptops / tablets)
+   ================================================================ */
+@media (max-width: 1024px) {
+
+  /* --- Navbar --- */
+  .top-nav {
+    padding: 0 16px;
+  }
+
+  .top-nav-left,
+  .top-nav-right {
+    gap: 6px;
+  }
+
+  /* --- Login / Register --- */
+  .login-card,
+  .register-card {
+    max-width: 360px;
+  }
+
+  .login-card .ant-card-body,
+  .register-card .ant-card-body {
+    padding: 20px 24px;
+  }
+
+  .login-card .ant-card-head-title,
+  .register-card .ant-card-head-title {
+    font-size: 30px;
+  }
+
+  /* --- Play Page --- */
+  .play-container {
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .play-card {
+    max-width: 380px;
+  }
+
+  /* --- Session / Waiting Room --- */
+  .session-layout {
+    padding: 20px 20px 28px;
+    gap: 18px;
+  }
+
+  .session-side-card {
+    max-width: 300px;
+  }
+
+  .session-main-card {
+    max-width: 480px;
+  }
+
+  .session-layout .session-side-card .ant-card-head-title,
+  .session-layout .session-main-card .ant-card-head-title {
+    font-size: 32px !important;
+  }
+
+  /* --- Vote Page --- */
+  .vote-card.ant-card {
+    max-width: 380px;
+  }
+
+  .vote-poster-wrap {
+    max-width: 280px;
+  }
+
+  .vote-action-button.ant-btn {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+  }
+
+  .vote-action-button.ant-btn .ant-btn-icon,
+  .vote-action-button.ant-btn .anticon {
+    font-size: 24px;
+  }
+
+  /* --- Results Page --- */
+  .results-container {
+    padding: 28px 20px 28px;
+  }
+
+  .results-header .ant-typography-title {
+    font-size: 36px !important;
+  }
+
+  .result-item-poster {
+    width: 120px;
+    height: 180px;
+  }
+
+  .result-item-info .ant-typography-title {
+    font-size: 24px !important;
+  }
+
+  /* --- Home / History --- */
+  .home-container,
+  .history-container {
+    padding: 48px 20px 20px;
+  }
+
+  /* --- Profile --- */
+  .profile-edit-card {
+    max-width: 380px;
+  }
+}
+
+/* ================================================================
+   RESPONSIVE: Small screens (mobile phones)
+   ================================================================ */
+@media (max-width: 480px) {
+
+  /* --- Navbar --- */
+  .top-nav {
+    padding: 0 10px;
+    height: 52px;
+  }
+
+  .top-nav-left,
+  .top-nav-right {
+    gap: 4px;
+  }
+
+  .top-nav-link.ant-btn {
+    font-size: 13px;
+    padding: 4px 8px;
+  }
+
+  /* --- Login / Register --- */
+  .login-container,
+  .card-container,
+  .profile-container {
+    padding: 16px;
+  }
+
+  .login-card,
+  .register-card {
+    max-width: 100%;
+  }
+
+  .login-card .ant-card-head-title,
+  .register-card .ant-card-head-title {
+    font-size: 28px;
+  }
+
+  .login-card .ant-card-body,
+  .register-card .ant-card-body {
+    padding: 16px;
+  }
+
+  /* --- Play Page --- */
+  .play-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .play-card {
+    max-width: 100%;
+    flex-basis: auto;
+  }
+
+  .play-card .ant-card-head-title {
+    font-size: 24px;
+  }
+
+  /* --- Session / Waiting Room --- */
+  .session-layout {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 12px 20px;
+    gap: 14px;
+  }
+
+  .session-side-card {
+    max-width: 100%;
+  }
+
+  .session-main-card {
+    max-width: 100%;
+    max-height: none;
+  }
+
+  .session-layout .session-side-card .ant-card-head-title,
+  .session-layout .session-main-card .ant-card-head-title {
+    font-size: 26px !important;
+  }
+
+  .session-layout .host-card .ant-form-item-label > label,
+  .session-layout .participant-card .ant-form-item-label > label {
+    font-size: 15px !important;
+  }
+
+  .host-section-title.ant-typography {
+    font-size: 22px !important;
+  }
+
+  .host-meta-line.ant-typography {
+    font-size: 15px !important;
+  }
+
+  .start-session-btn.ant-btn,
+  .end-session-btn.ant-btn,
+  .leave-session-btn.ant-btn {
+    min-width: 140px;
+    max-width: 100%;
+  }
+
+  /* --- Vote Page --- */
+  .vote-card.ant-card {
+    max-width: 100%;
+  }
+
+  .vote-poster-wrap {
+    max-width: 220px;
+  }
+
+  .vote-action-button.ant-btn {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+  }
+
+  .vote-action-button.ant-btn .ant-btn-icon,
+  .vote-action-button.ant-btn .anticon {
+    font-size: 22px;
+  }
+
+  .vote-actions {
+    gap: 12px;
+  }
+
+  .vote-title.ant-typography {
+    font-size: 20px !important;
+  }
+
+  .vote-description.ant-typography {
+    font-size: 13px;
+  }
+
+  /* --- Results Page --- */
+  .results-container {
+    padding: 16px 12px;
+  }
+
+  .results-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .results-header .ant-typography-title {
+    font-size: 28px !important;
+  }
+
+  .results-header .ant-typography {
+    font-size: 18px !important;
+  }
+
+  .result-item-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .result-item-poster {
+    width: 100px;
+    height: 150px;
+    align-self: center;
+  }
+
+  .result-item-info .ant-typography-title {
+    font-size: 20px !important;
+  }
+
+  .result-item-info .ant-typography-paragraph {
+    font-size: 14px !important;
+  }
+
+  .result-item-score {
+    align-self: center;
+    min-width: auto;
+  }
+
+  .score-badge {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+
+  .save-to-history-btn.ant-btn {
+    min-width: 160px;
+    height: 40px;
+    padding: 0 16px !important;
+    font-size: 14px !important;
+  }
+
+  .results-bottom-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .start-new-round-btn.ant-btn,
+  .leave-session-btn.ant-btn {
+    min-width: 160px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .similar-movies-list {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+
+  /* --- Home / History --- */
+  .home-container,
+  .history-container {
+    padding: 48px 12px 16px;
+  }
+
+  .home-intro,
+  .history-intro {
+    margin-bottom: 24px;
+  }
+
+  .home-intro h1,
+  .history-intro h1 {
+    font-size: 28px;
+  }
+
+  .home-action-card.ant-card,
+  .history-action-card.ant-card {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .home-actions,
+  .history-actions {
+    gap: 12px;
+  }
+
+  /* --- History List --- */
+  .history-entry-card .ant-card-body {
+    padding: 12px 14px !important;
+  }
+
+  .history-entry-info .ant-typography-title {
+    font-size: 18px !important;
+  }
+
+  .history-back-btn.ant-btn {
+    min-width: 140px;
+    height: 40px;
+    font-size: 14px !important;
+  }
+
+  /* --- Profile --- */
+  .profile-edit-card {
+    max-width: 100%;
+  }
+
+  .profile-card .ant-card-body {
+    padding: 16px;
+  }
+
+  .profile-card .ant-card-head-title {
+    font-size: 28px;
+  }
+
+  .profile-avatar.ant-avatar {
+    font-size: 36px !important;
+  }
+
+  .profile-actions {
+    gap: 12px;
+  }
+
+  .edit-button.ant-btn,
+  .cancel-button.ant-btn,
+  .save-button.ant-btn,
+  .logout-button.ant-btn {
+    min-width: 120px;
+  }
+}
