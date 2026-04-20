@@ -1244,3 +1244,125 @@ hyphens: auto;
   box-shadow: none !important;
   text-align: center;
 }
+
+/* History List Page Styles */
+.history-list {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--accent);
+}
+
+.history-entry-card.ant-card {
+  width: 100%;
+  background: var(--card) !important;
+  border: 1px solid var(--secondary) !important;
+  border-radius: 12px !important;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+
+.history-entry-card .ant-card-body {
+  padding: 16px 20px !important;
+}
+
+.history-entry-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.history-entry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-entry-info .ant-typography-title {
+  color: var(--text) !important;
+  font-size: 22px !important;
+  margin-bottom: 4px !important;
+}
+
+.history-entry-meta .ant-typography {
+  color: var(--accent) !important;
+  font-size: 14px !important;
+}
+
+.history-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.history-delete-btn.ant-btn {
+  color: rgba(255, 77, 79, 0.8) !important;
+  font-size: 16px;
+}
+
+.history-entry-arrow {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+/* History Detail Page Styles */
+.history-back-btn.ant-btn {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 8px;
+  min-width: 190px;
+  background: rgba(212, 175, 55, 0.15) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--primary-gold) !important;
+  height: 46px;
+  padding: 0 22px !important;
+  border-radius: 12px !important;
+  font-weight: 700;
+  font-size: 16px !important;
+}
+
+/* History Delete Modal Styles */
+.history-delete-modal .ant-modal-content {
+  background: var(--card) !important;
+  border: 1px solid var(--secondary) !important;
+}
+
+.history-delete-modal .ant-modal-header {
+  background: var(--card) !important;
+  border-bottom: 1px solid var(--secondary) !important;
+}
+
+.history-delete-modal .ant-modal-title {
+  color: var(--text) !important;
+}
+
+.history-delete-modal .ant-modal-close {
+  color: var(--text) !important;
+}
+
+.history-delete-modal .ant-modal-close:hover {
+  color: var(--primary-gold) !important;
+  background: rgba(212, 175, 55, 0.12) !important;
+}
+
+.history-delete-modal .ant-modal-body .ant-typography {
+  color: var(--text) !important;
+}
+
+.history-delete-modal .ant-modal-footer .ant-btn-default {
+  border-color: var(--secondary) !important;
+  color: var(--text) !important;
+}
+
+.history-delete-modal .ant-modal-footer .ant-btn-default:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}

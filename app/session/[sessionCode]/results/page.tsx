@@ -122,8 +122,8 @@ const handleSaveToHistory = async () => {
     const parsedUserId = Number(userIdRaw);
     const historyKey = `historySaved:${routeSessionCode}:${parsedUserId}`;
 
-    // TODO: call backend endpoint later, endpoint name can be changed, just a first idea
-    // await apiService.post(`/users/${parsedUserId}/history`, { sessionCode: routeSessionCode });
+    const token = parseStorageValue<string>(localStorage.getItem("token"));
+    await apiService.post("/histories", { sessionCode: routeSessionCode, token });
 
     localStorage.setItem(historyKey, "true");
     setIsHistorySaved(true);
