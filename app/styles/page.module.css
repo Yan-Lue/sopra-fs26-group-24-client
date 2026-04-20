@@ -34,6 +34,16 @@
   grid-row-start: 2;
 }
 
+.landing {
+  padding-top: 50%;
+  display: flex;
+  flex-direction: column; 
+  justify-content: center;
+  align-items: center;
+}
+
+
+
 .main ol {
   font-family: var(--font-geist-mono);
   padding-left: 0;
