@@ -1,0 +1,181 @@
+.scene {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.95);
+}
+
+.curtainLeft,
+.curtainRight {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background-color: var(--secondary);
+  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/950358/curtain.svg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
+  filter: brightness(0.75) contrast(1.2);
+}
+
+.curtainLeft {
+  left: 0;
+  transform-origin: top right;
+}
+
+.curtainRight {
+  left: 50%;
+  transform-origin: top left;
+}
+
+/* **********
+	opening
+********** */
+
+.scene.open {
+  pointer-events: none;
+  animation-fill-mode: forwards;
+  animation-name: expand-scene-horizontaly, bg-fade-out;
+  animation-duration: 2.5s, 4s;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-delay: 0s, 0s;
+  animation-iteration-count: 1, 1;
+  animation-direction: normal, normal;
+}
+
+.open .curtainLeft {
+  animation-fill-mode: forwards;
+  animation-name: curtain-opening, left-curtain-opening;
+  animation-duration: 4s, 4s;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-delay: 0s, 0s;
+  animation-iteration-count: 1, 1;
+  animation-direction: normal, normal;
+}
+
+.open .curtainRight {
+  animation-fill-mode: forwards;
+  animation-name: curtain-opening, right-curtain-opening;
+  animation-duration: 4s, 4s;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-delay: 0s, 0s;
+  animation-iteration-count: 1, 1;
+  animation-direction: normal, normal;
+}
+
+/* **********
+	animations
+********** */
+
+@keyframes expand-scene-horizontaly {
+
+  /* 2.5s */
+  from {
+    width: 100vw;
+    left: 0;
+  }
+
+  to {
+    width: 140vw;
+    left: -20vw;
+  }
+}
+
+@keyframes bg-fade-out {
+  0% {
+    background-color: rgba(0, 0, 0, 0.9);
+    visibility: visible;
+  }
+
+  65% {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+
+  100% {
+    background-color: rgba(0, 0, 0, 0);
+    visibility: hidden;
+  }
+}
+
+@keyframes curtain-opening {
+
+  /* 4s */
+  0% {
+    filter: brightness(0.75) contrast(1.2);
+  }
+
+  65% {
+    filter: brightness(0.9) contrast(1.2);
+  }
+
+  100% {
+    filter: brightness(1) contrast(1.2);
+  }
+}
+
+@keyframes left-curtain-opening {
+
+  /* 4s */
+  from {
+    transform: translate(0) rotate(0) scale(1, 1);
+  }
+
+  to {
+    transform: translate(-100%) rotate(20deg) scale(0, 2);
+  }
+}
+
+@keyframes right-curtain-opening {
+
+  /* 4s */
+  from {
+    transform: translate(0) rotate(0) scale(1, 1);
+  }
+
+  to {
+    transform: translate(100%) rotate(-20deg) scale(0, 2);
+  }
+}
+
+.enterButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--primary-gold);
+  color: var(--background);
+  border: none;
+  padding: 16px 40px;
+  font-size: 28px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  z-index: 10001;
+  transition: opacity 0.5s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+}
+
+.enterButton:hover {
+  transform: translate(-50%, -52%);
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.8);
+  background-color: var(--accent);
+}
+
+.open .enterButton {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* small screens */
+@media (max-width: 480px) {
+  .enterButton {
+    font-size: 20px;
+    padding: 12px 28px;
+  }
+}
