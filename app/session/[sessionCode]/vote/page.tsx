@@ -96,6 +96,20 @@ const VotePage: React.FC = () => {
     }
   }, [routeSessionCode]);
 
+  const storedJoinedUsers = parseStorageValue<number>(
+      sessionStorage.getItem(`joinedUsers:${routeSessionCode}`),
+    ) ?? 0;
+
+  useEffect(() => {
+    
+    if (storedJoinedUsers !== null && storedJoinedUsers > 0) {
+      setVoteProgress((prev) => ({ ...prev, joinedUsers: storedJoinedUsers }));
+    }
+  }, [routeSessionCode, storedJoinedUsers]);
+
+  const effectiveJoinedUsers =
+    voteProgress.joinedUsers > 0 ? voteProgress.joinedUsers : storedJoinedUsers;
+
   useEffect(() => {
     const connectVoteSocket = async () => {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
@@ -414,6 +428,7 @@ useEffect(() => {
     return null;
   }
 
+
   return (
     <div className="page-with-nav">
       {contextHolder}
@@ -475,7 +490,7 @@ useEffect(() => {
                       Your vote has been submitted!
                     </Typography.Title>
                     <Typography.Text className="vote-saved-text">
-                      Waiting for other participants to vote ({voteProgress.votesReceived}/{voteProgress.joinedUsers})...
+                      Waiting for other participants to vote ({voteProgress.votesReceived}/{effectiveJoinedUsers})...
                     </Typography.Text>
                     {timeRemaining > 0 && (
                       <Typography.Text strong>
@@ -489,7 +504,7 @@ useEffect(() => {
                 <>
                   <div className="vote-waiting-message">
                   <Typography.Text strong>
-                    Votes so far: {voteProgress.votesReceived}/{voteProgress.joinedUsers}
+                    Votes so far: {voteProgress.votesReceived}/{effectiveJoinedUsers}
                   </Typography.Text>
                 </div>  
                   <div className="vote-actions">
