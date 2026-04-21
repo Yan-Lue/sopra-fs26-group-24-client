@@ -128,6 +128,7 @@ const SessionWaitingRoom: React.FC = () => {
 
     hasRedirectedRef.current = true;
     sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
+    sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(joinedUsers > 0 ? joinedUsers : 1));
 
     router.replace(`/session/${sessionCode}/vote`);
   };

@@ -45,6 +45,11 @@ interface VotePutDTO {
   token: string;
 }
 
+interface VoteProgressDTO {
+  votesReceived: number;
+  joinedUsers: number;
+}
+
 const VotePage: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -60,6 +65,7 @@ const VotePage: React.FC = () => {
   const [timePerRound, setTimePerRound] = useState<number | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
+  const [voteProgress, setVoteProgress] = useState<VoteProgressDTO>({ votesReceived: 0, joinedUsers: 0 });
   const isAdvancingRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
 
@@ -89,6 +95,20 @@ const VotePage: React.FC = () => {
       setVotedMovieIds(storedVotes);
     }
   }, [routeSessionCode]);
+
+  const storedJoinedUsers = parseStorageValue<number>(
+      sessionStorage.getItem(`joinedUsers:${routeSessionCode}`),
+    ) ?? 0;
+
+  useEffect(() => {
+    
+    if (storedJoinedUsers !== null && storedJoinedUsers > 0) {
+      setVoteProgress((prev) => ({ ...prev, joinedUsers: storedJoinedUsers }));
+    }
+  }, [routeSessionCode, storedJoinedUsers]);
+
+  const effectiveJoinedUsers =
+    voteProgress.joinedUsers > 0 ? voteProgress.joinedUsers : storedJoinedUsers;
 
   useEffect(() => {
     const connectVoteSocket = async () => {
@@ -120,7 +140,6 @@ const VotePage: React.FC = () => {
         }
       }
 
-
       const cachedMovie = parseStorageValue<MovieGetDTO>(
         sessionStorage.getItem(`currentMovie:${routeSessionCode}`),
       );
@@ -139,9 +158,22 @@ const VotePage: React.FC = () => {
               try {
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
+                setVoteProgress((prev) => ({ ...prev, votesReceived: 0 }));
                 sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
+              }
+            },
+          );
+
+          client.subscribe(
+            `/topic/session/${routeSessionCode}/vote-progress`,
+            (frame: { body: string }) => {
+              try {
+                const progress = JSON.parse(frame.body) as VoteProgressDTO;
+                setVoteProgress(progress);
+              } catch (error) {
+                messageApi.error("Failed to parse vote progress in vote page");
               }
             },
           );
@@ -396,6 +428,7 @@ useEffect(() => {
     return null;
   }
 
+
   return (
     <div className="page-with-nav">
       {contextHolder}
@@ -427,6 +460,7 @@ useEffect(() => {
                 <Typography.Title level={2} className="vote-title">
                   {movie.title}
                 </Typography.Title>
+             
 
                 <Space size={[8, 8]} wrap className="vote-meta-row">
                   <Tag color="gold">Rating: {movie.rating?.toFixed(1) ?? "N/A"}</Tag>
@@ -445,6 +479,7 @@ useEffect(() => {
 
               <Divider />
 
+
               {isWaitingForNextMovie ? (
                 <div className="vote-bottom-waiting">
                   <Space orientation="vertical" size={12} className="vote-waiting-stack">
@@ -452,7 +487,7 @@ useEffect(() => {
                       Your vote has been submitted!
                     </Typography.Title>
                     <Typography.Text className="vote-saved-text">
-                      Waiting for other participants to vote...
+                      Waiting for other participants to vote ({voteProgress.votesReceived}/{effectiveJoinedUsers})...
                     </Typography.Text>
                     {timeRemaining > 0 && (
                       <Typography.Text strong>
@@ -462,7 +497,13 @@ useEffect(() => {
                   </Space>
                 </div>
               ) : (
+                
                 <>
+                  <div className="vote-waiting-message">
+                  <Typography.Text strong>
+                    Votes so far: {voteProgress.votesReceived}/{effectiveJoinedUsers}
+                  </Typography.Text>
+                </div>  
                   <div className="vote-actions">
                     <Button
                       shape="circle"
