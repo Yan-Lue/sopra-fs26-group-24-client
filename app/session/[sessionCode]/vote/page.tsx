@@ -45,11 +45,6 @@ interface VotePutDTO {
   token: string;
 }
 
-interface VoteProgressDTO {
-  votesReceived: number;
-  joinedUsers: number;
-}
-
 const VotePage: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -65,8 +60,8 @@ const VotePage: React.FC = () => {
   const [timePerRound, setTimePerRound] = useState<number | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
-  const [voteProgress, setVoteProgress] = useState<VoteProgressDTO>({ votesReceived: 0, joinedUsers: 0 });
   const isAdvancingRef = useRef(false);
+  const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
@@ -96,20 +91,6 @@ const VotePage: React.FC = () => {
     }
   }, [routeSessionCode]);
 
-  const storedJoinedUsers = parseStorageValue<number>(
-      sessionStorage.getItem(`joinedUsers:${routeSessionCode}`),
-    ) ?? 0;
-
-  useEffect(() => {
-    
-    if (storedJoinedUsers !== null && storedJoinedUsers > 0) {
-      setVoteProgress((prev) => ({ ...prev, joinedUsers: storedJoinedUsers }));
-    }
-  }, [routeSessionCode, storedJoinedUsers]);
-
-  const effectiveJoinedUsers =
-    voteProgress.joinedUsers > 0 ? voteProgress.joinedUsers : storedJoinedUsers;
-
   useEffect(() => {
     const connectVoteSocket = async () => {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
@@ -130,6 +111,7 @@ const VotePage: React.FC = () => {
         const serverTimePerRound = await apiService.get<number>(`/session/${routeSessionCode}/time`);
         if (typeof serverTimePerRound === "number" && serverTimePerRound > 0) {
           setTimePerRound(serverTimePerRound);
+          sessionStorage.setItem(`timePerRound:${routeSessionCode}`, String(serverTimePerRound));
         }
       } catch {
         // Optional fallback to local cache if request fails
@@ -158,22 +140,9 @@ const VotePage: React.FC = () => {
               try {
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
-                setVoteProgress((prev) => ({ ...prev, votesReceived: 0 }));
                 sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
-              }
-            },
-          );
-
-          client.subscribe(
-            `/topic/session/${routeSessionCode}/vote-progress`,
-            (frame: { body: string }) => {
-              try {
-                const progress = JSON.parse(frame.body) as VoteProgressDTO;
-                setVoteProgress(progress);
-              } catch (error) {
-                messageApi.error("Failed to parse vote progress in vote page");
               }
             },
           );
@@ -234,74 +203,100 @@ const VotePage: React.FC = () => {
     };
   }, [apiService, messageApi, routeSessionCode, router]);
 
-  // Auto-advance to next movie after timePerRound seconds
-  // 1. Reset the numeric state whenever a new movie arrives
-  // Unified Timer Logic
-useEffect(() => {
-  // 1. Guard clauses
-  if (!movie || isLoading || !timePerRound || timePerRound <= 0) {
-    return;
-  }
-
-  const currentMovieId = getMovieId(movie);
-
-  // 2. Reset the time whenever the movie ID actually changes
-  if (currentMovieId !== lastMovieIdRef.current) {
-    lastMovieIdRef.current = currentMovieId;
-    setTimeRemaining(timePerRound);
-  }
-
-  // 3. Start the interval
-  const intervalId = setInterval(() => {
-    setTimeRemaining((prev) => {
-      // If we've reached the end
-      if (prev <= 1) {
-        clearInterval(intervalId);
-        
-        // Host triggers the transition
-        if (isHost && !isAdvancingRef.current) {
-          void advanceToNextMovie();
-        }
-        return 0;
-      }
-      return prev - 1;
-    });
-  }, 1000);
-
-  // 4. Cleanup: This is crucial. It clears the timer when the movie changes
-  // or the component unmounts, preventing "phantom" timers.
-  return () => clearInterval(intervalId);
-
-}, [movie, isLoading, timePerRound, isHost]); 
-// 'movie' is the key dependency here to restart the clock
-
-  const advanceToNextMovie = async () => {
-    if (!isHost || isAdvancingRef.current) {
+  useEffect(() => {
+    if (!routeSessionCode || timePerRound) {
       return;
     }
 
-    isAdvancingRef.current = true;
+    const localRaw = sessionStorage.getItem(`timePerRound:${routeSessionCode}`);
+    const localValue = localRaw ? Number(localRaw) : null;
+    if (localValue && localValue > 0) {
+      setTimePerRound(localValue);
+      return;
+    }
 
-    try {
-      const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
-      setMovie(nextMovie);
-      sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
-    } catch (error) {
-      const apiError = error as { status?: number };
-      // currently left in to still redirect as fallback
-      if (apiError?.status === 409) {
-        router.replace(`/session/${routeSessionCode}/results`);
-        messageApi.info("Session ended. Redirecting to results...");
+    let cancelled = false;
+
+    const syncTimePerRound = async () => {
+      try {
+        const serverTimePerRound = await apiService.get<number>(`/session/${routeSessionCode}/time`);
+        if (cancelled || typeof serverTimePerRound !== "number" || serverTimePerRound <= 0) {
+          return;
+        }
+
+        setTimePerRound(serverTimePerRound);
+        sessionStorage.setItem(`timePerRound:${routeSessionCode}`, String(serverTimePerRound));
+      } catch {
+        // Retry below until the session timer can be resolved.
+      }
+    };
+
+    void syncTimePerRound();
+    const intervalId = setInterval(() => {
+      void syncTimePerRound();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [apiService, routeSessionCode, timePerRound]);
+
+  // Auto-advance to next movie after timePerRound seconds
+  useEffect(() => {
+    if (!movie || isLoading || !timePerRound || timePerRound <= 0) {
+      return;
+    }
+
+    const currentMovieId = getMovieId(movie);
+    if (currentMovieId !== lastMovieIdRef.current) {
+      lastMovieIdRef.current = currentMovieId;
+      setTimeRemaining(timePerRound);
+    }
+
+    const advanceToNextMovie = async () => {
+      if (!isHost || isAdvancingRef.current) {
         return;
       }
-    } finally {
-      isAdvancingRef.current = false;
-    }
-  };
+
+      isAdvancingRef.current = true;
+
+      try {
+        const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
+        setMovie(nextMovie);
+        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+      } catch (error) {
+        const apiError = error as { status?: number };
+        if (apiError?.status === 409) {
+          router.replace(`/session/${routeSessionCode}/results`);
+          messageApi.info("Session ended. Redirecting to results...");
+          return;
+        }
+      } finally {
+        isAdvancingRef.current = false;
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+
+          if (isHost && !isAdvancingRef.current) {
+            void advanceToNextMovie();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [movie, isLoading, timePerRound, isHost, apiService, routeSessionCode, router, messageApi]);
 
   const handleVoteClick = async (vote: "x" | "skip" | "heart") => {
     //first check if movie data is loaded and if a vote submission is already in progress
-    if (!movie || isSubmittingVote) {
+    if (!movie || isSubmittingVoteRef.current || isSubmittingVote) {
       return;
     }
 
@@ -343,6 +338,7 @@ useEffect(() => {
     };
 
     try {
+      isSubmittingVoteRef.current = true;
       setIsSubmittingVote(true);
       await apiService.post<string>(`/session/${routeSessionCode}/vote`, votePayload);
       const nextVotedMovieIds = [...votedMovieIds, resolvedMovieId];
@@ -356,6 +352,7 @@ useEffect(() => {
       console.error("Failed to submit vote:", error);
       messageApi.error("Failed to submit vote. Please try again.");
     } finally {
+      isSubmittingVoteRef.current = false;
       setIsSubmittingVote(false);
     }
   };
@@ -363,7 +360,8 @@ useEffect(() => {
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
-  const isWaitingForNextMovie = (hasVotedCurrentMovie || timeRemaining <= 0) && !isSubmittingVote;
+  const hasTimedOutCurrentMovie = timeRemaining <= 0;
+  const isWaitingForNextMovie = (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
 
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
@@ -371,12 +369,17 @@ useEffect(() => {
     }
 
     let cancelled = false;
+    let isFetching = false;
 
     const pollCurrentMovie = async () => {
-      if (cancelled) return;
+      if (cancelled || isFetching) return;
+
+      isFetching = true;
 
       try {
-        const currentMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/current`);
+        const currentMovie = await apiService.get<MovieGetDTO>(
+            `/session/${routeSessionCode}/current`);
+
         if (cancelled || !currentMovie) return;
 
         const currentMovieId = getMovieId(currentMovie);
@@ -397,21 +400,24 @@ useEffect(() => {
         }
 
         if (apiError?.status === 404) {
-          return;
+          console.error("Polling error", error);
         }
+      } finally {
+        isFetching = false;
       }
     };
 
-    void pollCurrentMovie();
-    const id = window.setInterval(() => {
-      void pollCurrentMovie();
-    }, 1200);
+    pollCurrentMovie().catch(console.error);
+
+    const intervalId = setInterval(() => {
+      pollCurrentMovie().catch(console.error);
+    }, 1500);
 
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      clearInterval(intervalId);
     };
-  }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService]);
+  }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService, router, movie]);
 
   if (isLoading) {
     return (
@@ -484,10 +490,12 @@ useEffect(() => {
                 <div className="vote-bottom-waiting">
                   <Space orientation="vertical" size={12} className="vote-waiting-stack">
                     <Typography.Title level={4} className="vote-waiting-title">
-                      Your vote has been submitted!
+                      {hasVotedCurrentMovie ? "Your vote has been submitted!" : "Time is up for this movie."}
                     </Typography.Title>
                     <Typography.Text className="vote-saved-text">
-                      Waiting for other participants to vote ({voteProgress.votesReceived}/{effectiveJoinedUsers})...
+                      {hasVotedCurrentMovie
+                        ? "Waiting for other participants to vote..."
+                        : "Waiting for the next movie..."}
                     </Typography.Text>
                     {timeRemaining > 0 && (
                       <Typography.Text strong>
@@ -499,11 +507,6 @@ useEffect(() => {
               ) : (
                 
                 <>
-                  <div className="vote-waiting-message">
-                  <Typography.Text strong>
-                    Votes so far: {voteProgress.votesReceived}/{effectiveJoinedUsers}
-                  </Typography.Text>
-                </div>  
                   <div className="vote-actions">
                     <Button
                       shape="circle"
