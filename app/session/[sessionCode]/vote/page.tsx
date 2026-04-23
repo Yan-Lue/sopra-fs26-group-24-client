@@ -66,7 +66,6 @@ const VotePage: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
   const [voteProgress, setVoteProgress] = useState<VoteProgressDTO>({ votesReceived: 0, joinedUsers: 0 });
-  const isAdvancingRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
@@ -254,14 +253,9 @@ useEffect(() => {
   // 3. Start the interval
   const intervalId = setInterval(() => {
     setTimeRemaining((prev) => {
-      // If we've reached the end
+        // If we've reached the end, keep at 0 and wait for backend-driven advance
       if (prev <= 1) {
         clearInterval(intervalId);
-        
-        // Host triggers the transition
-        if (isHost && !isAdvancingRef.current) {
-          void advanceToNextMovie();
-        }
         return 0;
       }
       return prev - 1;
@@ -274,30 +268,6 @@ useEffect(() => {
 
 }, [movie, isLoading, timePerRound, isHost]); 
 // 'movie' is the key dependency here to restart the clock
-
-  const advanceToNextMovie = async () => {
-    if (!isHost || isAdvancingRef.current) {
-      return;
-    }
-
-    isAdvancingRef.current = true;
-
-    try {
-      const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
-      setMovie(nextMovie);
-      sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
-    } catch (error) {
-      const apiError = error as { status?: number };
-      // currently left in to still redirect as fallback
-      if (apiError?.status === 409) {
-        router.replace(`/session/${routeSessionCode}/results`);
-        messageApi.info("Session ended. Redirecting to results...");
-        return;
-      }
-    } finally {
-      isAdvancingRef.current = false;
-    }
-  };
 
   const handleVoteClick = async (vote: "x" | "skip" | "heart") => {
     //first check if movie data is loaded and if a vote submission is already in progress
@@ -363,7 +333,7 @@ useEffect(() => {
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
-  const isWaitingForNextMovie = (hasVotedCurrentMovie || timeRemaining <= 0) && !isSubmittingVote;
+  const isWaitingForNextMovie = hasVotedCurrentMovie && !isSubmittingVote;
 
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
