@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 const { Title, Paragraph } = Typography;
 
 const homeDescription =
-  "The ultimate movie decision app for friends. Swipe through movies together like Tinder and share your preferences to find the perfect film for your next movie night. No more endless debates – just swipe, match, and watch!";
+  "The ultimate movie decision app for friends. Vote on movies together and share your preferences to find the perfect film for your next movie night. No more endless debates – just vote, match, and watch!";
 
 const Home: React.FC = () => {
   const router = useRouter();

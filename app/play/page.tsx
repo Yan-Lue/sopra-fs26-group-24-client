@@ -3,7 +3,7 @@
 import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
 import { parseStorageValue } from "@/utils/storage";
-import { Button, Card, Form, Input, message, Select } from "antd";
+import { Button, Card, Form, Input, message, Slider } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -186,6 +186,7 @@ const Play: React.FC = () => {
             form={createForm}
             layout="vertical"
             onFinish={handleCreateSession}
+            initialValues={{ maxPlayers: 1 }}
           >
             <Form.Item
               style={{ marginTop: 24 }}
@@ -200,20 +201,26 @@ const Play: React.FC = () => {
               name="maxPlayers"
               label="Number of Players"
               rules={[{ required: true, message: "Please input the number of players!" }]}
+              valuePropName="value"
+              getValueFromEvent={(value) => value}
             >
-
-              <Select
-                placeholder={
-                  <span style={{ color: "var(--accent)", opacity: 1 }}>
-                    Select the number of players...
-                  </span>
-                }
-                options={playerOptions}
+              <Slider
+                min={1}
+                max={9}
+                marks={{ 
+                  1: '1', 
+                  3: '3', 
+                  5: '5', 
+                  7: '7',
+                  9: '9' }}
+                step={1}
+                className="ui-slider"
+                tooltip={{ formatter: (value) => `${value}` }}
               />
             </Form.Item>
 
             <Form.Item>
-              <Button type="primary" htmlType="submit" className="play-button">
+              <Button type="primary" htmlType="submit" className="play-button" loading={loading}>
                 Create Session
               </Button>
             </Form.Item>
@@ -234,7 +241,7 @@ const Play: React.FC = () => {
             </Form.Item>
 
             <Form.Item>
-              <Button type="primary" htmlType="submit" className="play-button">
+              <Button type="primary" htmlType="submit" className="play-button" loading={loading}>
                 Join Session
               </Button>
             </Form.Item>

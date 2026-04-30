@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Form, Modal, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -439,7 +439,7 @@ const SessionWaitingRoom: React.FC = () => {
       dto.genres = genres;
     }
 
-    if (typeof values.minRating === "number" && values.minRating > 0) {
+    if (typeof values.minRating === "number" && values.minRating >= 1) {
       dto.minRating = values.minRating;
     }
 
@@ -545,15 +545,25 @@ const SessionWaitingRoom: React.FC = () => {
         </Space>
       </Form.Item>
 
-      <Form.Item label="Minimum Rating" name="minRating">
-        <Select
+      <Form.Item 
+        label="Minimum Rating"
+        name="minRating"
+        valuePropName="value"
+        getValueFromEvent={(value) => value}
+      >
+        <Slider
           disabled={!isHost}
-          options={[
-            { value: 0, label: "Any rating" },
-            { value: 6, label: "6+" },
-            { value: 7, label: "7+" },
-            { value: 8, label: "8+" },
-          ]}
+          min={1}
+          max={10}
+          step={0.1}
+          className="ui-slider"
+          marks={{
+            1: 'Any',
+            10: '10',
+          }}
+          tooltip={{ 
+            formatter: (value) => `${value}` 
+          }}
         />
       </Form.Item>
 
@@ -585,7 +595,7 @@ const SessionWaitingRoom: React.FC = () => {
               initialValues={{
                 rounds: 5,
                 timePerRound: 15,
-                minRating: 0,
+                minRating: 1,
                 releaseYear: "any",
               }}
               onValuesChange={(_, allValues) => {
