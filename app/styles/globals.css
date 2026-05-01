@@ -166,9 +166,11 @@ a {
   white-space: pre-wrap;
 }
 
+/* Slider Styles */
+
 .ui-slider { 
   width: 100%;
-  max-width: 95%;
+  max-width: 98%;
   padding-inline: 12px;
   margin: 8px auto 18px;
 }
@@ -194,6 +196,14 @@ a {
 .ui-slider .ant-slider-mark-text-active {
   color: rgba(245,230,211,0.95) !important;
   font-weight: 600;
+}
+
+.ui-slider.small {
+  width: 100%;
+  max-width: 220px;  
+  margin: 8px auto 18px;  
+  padding-inline: 0;   
+  box-sizing: content-box; 
 }
 
 /* Waitingroom Page Styles */
@@ -470,7 +480,7 @@ color: var(--background) !important;
   gap: 6px;
 }
 
-/* Home and History Page Styles */
+/* Home, Play and History Page Styles */
 .home-container,
 .history-container {
   min-height: 100vh;
@@ -522,6 +532,30 @@ color: var(--background) !important;
 .home-action-card .ant-typography,
 .history-action-card .ant-typography {
   color: var(--text) !important;
+}
+
+.history-action-card.ant-card {
+  background-image: url('/HistoryPoster.png') !important;
+  background-color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important ;
+}
+
+.history-action-card .ant-card-body {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.play-action-card.ant-card {
+  background-image: url('/PlayPoster.png') !important;
+  background-color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important ;
+}
+
+.play-action-card .ant-card-body {
+  background: rgba(0, 0, 0, 0.5);
 }
 
 /* Navbar Styles */
@@ -1763,6 +1797,7 @@ hyphens: auto;
   .history-action-card.ant-card {
     max-width: 100%;
     flex-basis: 100%;
+    margin-top: 16px !important;
   }
 
   .home-actions,

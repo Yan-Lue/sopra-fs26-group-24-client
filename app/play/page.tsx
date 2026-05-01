@@ -9,12 +9,12 @@ import { useEffect, useState } from "react";
 
 const createSessionDescription = `Host your own movie matching session and invite all your friends to join in on the fun! 
 
-Take control as the host and guide everyone through an exciting collection of movie choices. Watch as everyone swipes through films together, and discover which movies your group loves the most. Create unforgettable movie nights by finding the perfect film that everyone wants to watch!`;
+Take control as the host and guide everyone through an exciting collection of movie choices. Watch as everyone votes on films together, and discover which movies your group loves the most. Create unforgettable movie nights by finding the perfect movie that everyone wants to watch!`;
 
 
 const joinSessionDescription = `Got a session code from a friend? Jump right in and join the excitement! 
 
-Enter the unique session code below and start swiping through movies with your group. Share your movie preferences, see what everyone else thinks, and help your friends discover the perfect film for your next movie night together. The more people join, the better the recommendations!`;
+Enter the unique session code below and start voting on movies with your group. Share your movie preferences, see what everyone else thinks, and help your friends discover the perfect film for your next movie night together. The more people join, the better the recommendations!`;
 
 interface CreateSessionFormValues {
   sessionName: string;
@@ -49,14 +49,6 @@ interface JoinSessionResponse {
   joinedUsers?: number; // Optional, for frontend logic
 }
 
-// Generate player options for the Select component
-const playerOptions = Array.from({ length: 16 }, (_, index) => ({
-  value: index + 1,
-  label: `${index + 1}`,
-}));
-
-//implement actual functionality for creating and joining sessions
-//usestate -> setsession name
 const Play: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
@@ -148,7 +140,7 @@ const Play: React.FC = () => {
   };
 
   const handleJoinSession = async (values: JoinSessionFormValues) => {
-  const trimmedCode = values.sessionCode.trim();
+  const trimmedCode = values.sessionCode.toLowerCase().trim();
   if (!trimmedCode) {
     joinForm.setFields([
         { name: "sessionCode", errors: ["Please enter a session code."] },
@@ -166,7 +158,6 @@ const Play: React.FC = () => {
     return;
   }
 
-  // Navigate to session page; the session page will handle joining if needed
   router.push(`/session/${trimmedCode}`);
 };
 
@@ -209,9 +200,6 @@ const Play: React.FC = () => {
                 max={9}
                 marks={{ 
                   1: '1', 
-                  3: '3', 
-                  5: '5', 
-                  7: '7',
                   9: '9' }}
                 step={1}
                 className="ui-slider"
@@ -237,7 +225,7 @@ const Play: React.FC = () => {
               label="Session Code"
               rules={[{ required: true, message: "Please input the session code!" }]}
             >
-              <Input placeholder="Enter Session Code" />
+              <Input placeholder="Enter Session Code" maxLength={5}/>
             </Form.Item>
 
             <Form.Item>

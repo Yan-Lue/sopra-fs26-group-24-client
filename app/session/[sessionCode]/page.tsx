@@ -29,14 +29,15 @@ interface FilterFormValues {
   rounds: number;
   timePerRound: number;
   minRating?: number;
-  releaseYear?: string;
+  releaseYearRange?: [number, number];
 }
 
 interface SessionFilterPutDTO {
   roundLimit: number;
   genres?: string[];
   minRating?: number;
-  releaseYear?: number;
+  minReleaseYear?: number;
+  maxReleaseYear?: number;  
   timePerRound: number;
 }
 
@@ -439,13 +440,15 @@ const SessionWaitingRoom: React.FC = () => {
       dto.genres = genres;
     }
 
-    if (typeof values.minRating === "number" && values.minRating >= 1) {
+    if (typeof values.minRating === "number" && values.minRating >= 0) {
       dto.minRating = values.minRating;
     }
 
-    if (values.releaseYear && values.releaseYear !== "any") {
-      dto.releaseYear = Number(values.releaseYear);
-    }
+    if (values.releaseYearRange?.[0] && values.releaseYearRange?.[1]) {
+      const [minYear, maxYear] = values.releaseYearRange;
+      dto.minReleaseYear = minYear;
+      dto.maxReleaseYear = maxYear;
+    } 
 
     return dto;
   };
@@ -553,29 +556,35 @@ const SessionWaitingRoom: React.FC = () => {
       >
         <Slider
           disabled={!isHost}
-          min={1}
+          min={0}
           max={10}
           step={0.1}
-          className="ui-slider"
+          className="ui-slider small"
           marks={{
-            1: 'Any',
+            0: 'Any',
             10: '10',
           }}
           tooltip={{ 
-            formatter: (value) => `${value}` 
+            formatter: (value) => `${value}+` 
           }}
         />
       </Form.Item>
 
-      <Form.Item label="Release Year" name="releaseYear">
-        <Select
+      <Form.Item label="Release Year Range" name="releaseYearRange">
+        <Slider
+          range
           disabled={!isHost}
-          options={[
-            { value: "any", label: "Any year" },
-            { value: "2020", label: "2020+" },
-            { value: "2010", label: "2010+" },
-            { value: "2000", label: "2000+" },
-          ]}
+          min={1960}
+          max={new Date().getFullYear()}
+          step={1}
+          className="ui-slider small"
+          marks={{
+            1960: '1960',
+            [new Date().getFullYear()]: `${new Date().getFullYear()}`
+          }}
+          tooltip={{ 
+            formatter: (value) => `${value}` 
+          }}
         />
       </Form.Item>
     </div>
@@ -595,8 +604,8 @@ const SessionWaitingRoom: React.FC = () => {
               initialValues={{
                 rounds: 5,
                 timePerRound: 15,
-                minRating: 1,
-                releaseYear: "any",
+                minRating: 0,
+                releaseYearRange: [1960, new Date().getFullYear()],
               }}
               onValuesChange={(_, allValues) => {
                 const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres);
@@ -627,7 +636,7 @@ const SessionWaitingRoom: React.FC = () => {
               </Typography.Title>
 
               <div className="session-code-row">
-                <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
+                <Typography.Text className="host-meta-line">Session Code: {sessionCode?.toUpperCase()}</Typography.Text>
                 <Button size="small" type="default" className="copy-link-btn" icon={<CopyOutlined />} aria-label="Copy Session Link" onClick={handleCopySessionLink}>
                 </Button>
               </div>
@@ -664,7 +673,7 @@ const SessionWaitingRoom: React.FC = () => {
                   </Button>
                 </>
               ) : (
-                <Button className="leave-session-btn" onClick={() => handleLeave()}>
+                <Button className="leave-session-btn" onClick={() => handleLeave()} loading={isLoading}>
                   Leave Session
                 </Button>
               )}
