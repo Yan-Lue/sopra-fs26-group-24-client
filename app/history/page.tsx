@@ -3,10 +3,10 @@
 import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
 import { parseStorageValue } from "@/utils/storage";
-import { DeleteOutlined, RightOutlined } from "@ant-design/icons";
-import { Button, Card, Modal, Typography, message } from "antd";
+import { DeleteOutlined, FilterOutlined, RightOutlined } from "@ant-design/icons";
+import { Badge, Button, Card, Collapse, Input, Modal, Select, Typography, message } from "antd";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -19,13 +19,75 @@ interface HistoryEntry {
   movies: { movieId: number; score: number }[];
 }
 
+type DateFilter = "all" | "7d" | "30d" | "90d" | "1y";
+type CountFilter = "any" | "1" | "2" | "3-4" | "5+";
+
 const historyDescription =
   "Review your previous sessions and dive into the details of your movie nights. See which movies you and your friends enjoyed, check out the session summaries, and relive the fun moments. Your movie history is just a click away!";
+
+const dateFilterOptions = [
+  { value: "all", label: "All time" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "1y", label: "Last year" },
+];
+
+const countFilterOptions = [
+  { value: "any", label: "Any" },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
+  { value: "3-4", label: "3-4" },
+  { value: "5+", label: "5+" },
+];
+
+const getCutoffDate = (filter: DateFilter) => {
+  const now = new Date();
+  switch (filter) {
+    case "7d":
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "30d":
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case "90d":
+      return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    case "1y":
+      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    default:
+      return null;
+  }
+};
+
+const matchesCountFilter = (value: number, filter: CountFilter) => {
+  switch (filter) {
+    case "1":
+      return value === 1;
+    case "2":
+      return value === 2;
+    case "3-4":
+      return value >= 3 && value <= 4;
+    case "5+":
+      return value >= 5;
+    default:
+      return true;
+  }
+};
 
 const History: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [histories, setHistories] = useState<HistoryEntry[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<HistoryEntry | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [playerFilter, setPlayerFilter] = useState<CountFilter>("any");
+  const [movieFilter, setMovieFilter] = useState<CountFilter>("any");
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setDateFilter("all");
+    setPlayerFilter("any");
+    setMovieFilter("any");
+  };
+
   const router = useRouter();
   const apiService = useApi();
   const [messageApi, contextHolder] = message.useMessage();
@@ -55,6 +117,23 @@ const History: React.FC = () => {
     setIsAuthorized(true);
     void fetchHistories();
   }, [router, fetchHistories]);
+
+  const filteredHistories = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const cutoffDate = getCutoffDate(dateFilter);
+
+    return histories.filter((entry) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 || entry.sessionName.toLowerCase().includes(normalizedSearch);
+
+      const entryDate = new Date(entry.creationDate);
+      const matchesDate = cutoffDate ? entryDate >= cutoffDate : true;
+      const matchesPlayers = matchesCountFilter(entry.joinedUsers, playerFilter);
+      const matchesMovies = matchesCountFilter(entry.movies.length, movieFilter);
+
+      return matchesSearch && matchesDate && matchesPlayers && matchesMovies;
+    });
+  }, [histories, searchTerm, dateFilter, playerFilter, movieFilter]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -96,13 +175,90 @@ const History: React.FC = () => {
             <Paragraph>{historyDescription}</Paragraph>
           </div>
 
+          <div className="history-filters">
+            <Collapse
+              className="history-filters-collapse"
+              defaultActiveKey={[]}
+              expandIconPlacement="end"
+              items={[
+                {
+                  key: "history-filters",
+                  label: (
+                    <span className="history-filter-title">
+                      <FilterOutlined />
+                      Filters
+                      <Badge count={filteredHistories.length} overflowCount={999} className="history-filter-badge" />
+                    </span>
+                  ),
+                  children: (
+                    <div className="history-filters-panel">
+                      <div className="history-filters-grid">
+                        <div className="history-filter-field">
+                          <Text className="history-filter-label">Session Name</Text>
+                          <Input
+                            allowClear
+                            placeholder="Search sessions"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="history-filter-field">
+                          <Text className="history-filter-label">Date</Text>
+                          <Select
+                            value={dateFilter}
+                            onChange={(value) => setDateFilter(value)}
+                            options={dateFilterOptions}
+                          />
+                        </div>
+
+                        <div className="history-filter-field">
+                          <Text className="history-filter-label">Number of Players</Text>
+                          <Select
+                            value={playerFilter}
+                            onChange={(value) => setPlayerFilter(value)}
+                            options={countFilterOptions}
+                          />
+                        </div>
+
+                        <div className="history-filter-field">
+                          <Text className="history-filter-label">Number of Movies</Text>
+                          <Select
+                            value={movieFilter}
+                            onChange={(value) => setMovieFilter(value)}
+                            options={countFilterOptions}
+                          />
+                        </div>
+
+                        <div className="history-filters-actions">
+                          <Button
+                            size="small"
+                            type="text"
+                            className="history-clear-filters-btn"
+                            onClick={clearFilters}
+                          >
+                            Clear Filters
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </div>
+
           <div className="history-list">
-            {histories.length === 0 ? (
+            {filteredHistories.length === 0 ? (
               <div className="history-empty">
-                <Text>No saved sessions yet. Play a session and save it to see it here!</Text>
+                <Text>
+                  {histories.length === 0
+                    ? "No saved sessions yet. Play a session and save it to see it here!"
+                    : "No sessions match the selected filters."}
+                </Text>
               </div>
             ) : (
-              histories.map((entry) => (
+              filteredHistories.map((entry) => (
                 <Card
                   key={entry.historyId}
                   className="history-entry-card"

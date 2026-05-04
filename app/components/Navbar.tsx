@@ -98,7 +98,7 @@ const Navbar: React.FC = () => {
     {contextHolder}
     <header className="top-nav">
       <div className="top-nav-left">
-        <div className="top-nav-logo" onClick={() => router.push("/home")}>
+        <button className="top-nav-logo" onClick={() => router.push("/home")}>
           <Image
             src="/UWatchIcon.png"
             alt="UWatch"
@@ -106,7 +106,7 @@ const Navbar: React.FC = () => {
             height={40}
             priority
           />
-        </div>
+        </button>
         {navItems.map((item) => (
           <Button
             key={item.href}
