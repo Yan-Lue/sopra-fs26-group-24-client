@@ -10,6 +10,22 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 
+//useRef allows us to keep track of whether we're currently advancing to the next movie, preventing multiple simultaneous advances if the timer triggers while an advance is already in progress.
+
+/** 
+interface SessionPutDTO {
+  id: number;
+  token: string;
+}
+
+interface SessionResponse {
+  sessionId: number;
+  sessionCode: string;
+  sessionToken: string;
+  hostId: number;
+}
+*/
+
 interface MovieGetDTO {
   movieId: number;
   title: string;
@@ -42,11 +58,17 @@ const VotePage: React.FC = () => {
   const [votedMovieIds, setVotedMovieIds] = useState<number[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [timePerRound, setTimePerRound] = useState<number | null>(null);
+  const [votesReceived, setVotesReceived] = useState<number>(0);
+  const [joinedUsersCount, setJoinedUsersCount] = useState<number>(1);
   const [messageApi, contextHolder] = message.useMessage();
   const [isHost, setIsHost] = useState(false);
+  const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [totalRounds, setTotalRounds] = useState<number | null>(null);
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
+  const lastRoundIncrementMovieIdRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -72,6 +94,18 @@ const VotePage: React.FC = () => {
     );
     if (storedVotes && Array.isArray(storedVotes)) {
       setVotedMovieIds(storedVotes);
+    }
+    const storedJoined = sessionStorage.getItem(`joinedUsers:${routeSessionCode}`);
+    if (storedJoined) {
+      const parsed = Number(storedJoined);
+      if (!Number.isNaN(parsed) && parsed > 0) setJoinedUsersCount(parsed);
+    }
+    const storedFilters = parseStorageValue<{ roundLimit?: unknown }>(
+      sessionStorage.getItem(`sessionFilters:${routeSessionCode}`),
+    );
+    if (storedFilters && storedFilters.roundLimit) {
+      const parsed = Number(storedFilters.roundLimit);
+      if (!Number.isNaN(parsed) && parsed > 0) setTotalRounds(parsed);
     }
   }, [routeSessionCode]);
 
@@ -115,15 +149,52 @@ const VotePage: React.FC = () => {
 
       const client = new Client({
         webSocketFactory: () => new SockJS(getSocketEndpoint()),
-        //built-in from stopjs, waits 5 seconds before trying to reconnect after connection loss (in ms)
-        reconnectDelay: 5000,
+        //built-in from stopjs, waits 0.5 seconds before trying to reconnect after connection loss (in ms)
+        // --> may help with websocket instability 
+        reconnectDelay: 500,
         onConnect: () => {
+            //subcribe to vote progress updates(votes received/joined users)
+            //get all votes and users and validate them before updating
+            client.subscribe(
+              `/topic/session/${routeSessionCode}/vote-progress`,
+              (frame: { body: string }) => {
+                try {
+                  const payload = JSON.parse(frame.body) as unknown;
+                  if (payload && typeof payload === "object") {
+                    const votes = (payload as { votesReceived?: unknown }).votesReceived;
+                    const joined = (payload as { joinedUsers?: unknown }).joinedUsers;
+                    const votesNum = typeof votes === "number" ? votes : Number(votes ?? 0);
+                    const joinedNum = typeof joined === "number" ? joined : Number(joined ?? joinedUsersCount);
+                    const validJoined = Number.isNaN(joinedNum) ? joinedUsersCount : joinedNum;
+                    const validVotes = Number.isNaN(votesNum) ? 0 : votesNum;
+
+                    setJoinedUsersCount(validJoined);
+
+                    setVotesReceived(validVotes);
+
+                    //persist joined users so other views can read it
+                    try {
+                      sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(validJoined));
+                    } catch {}
+                  }
+                } catch (error) {
+                  console.error("Failed to parse vote-progress message:", error);
+                }
+              },
+            );
           client.subscribe(
             `/topic/session/${routeSessionCode}/next`,
             (frame: { body: string }) => {
               try {
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
+                setVotesReceived(0);
+                setHasRoundTimerStarted(false);
+                const currentMovieId = typeof nextMovie.movieId === "number" ? nextMovie.movieId : null;
+                if (currentMovieId && currentMovieId !== lastRoundIncrementMovieIdRef.current) {
+                  lastRoundIncrementMovieIdRef.current = currentMovieId;
+                  setCurrentRound((prev) => prev + 1);
+                }
                 sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
@@ -236,6 +307,7 @@ const VotePage: React.FC = () => {
     if (currentMovieId !== lastMovieIdRef.current) {
       lastMovieIdRef.current = currentMovieId;
       setTimeRemaining(timePerRound);
+      setHasRoundTimerStarted(true);
     }
 
     const advanceToNextMovie = async () => {
@@ -344,8 +416,10 @@ const VotePage: React.FC = () => {
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
-  const hasTimedOutCurrentMovie = timeRemaining <= 0;
-  const isWaitingForNextMovie = (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
+  const hasTimedOutCurrentMovie = hasRoundTimerStarted && timeRemaining <= 0;
+  const isWaitingForNextMovie = hasRoundTimerStarted && (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
+
+  const showVoteProgress = votesReceived > 0;
 
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
@@ -469,6 +543,34 @@ const VotePage: React.FC = () => {
 
               <Divider />
 
+            
+              {typeof timePerRound === "number" && timePerRound > 0 && (
+                <div className="vote-timer">
+                  <Typography.Text strong>
+                    Time left: {timeRemaining} second{timeRemaining === 1 ? "" : "s"}
+                  </Typography.Text>
+                </div>
+              )}
+
+              {totalRounds && (
+                <div className="vote-round">
+                  <Typography.Text>
+                    Round {currentRound} / {totalRounds}
+                  </Typography.Text>
+                </div>
+              )}
+
+              <div className="vote-progress">
+                {showVoteProgress ? (
+                  <Typography.Text>
+                    Voted: {votesReceived} / {joinedUsersCount}
+                  </Typography.Text>
+                ) : (
+                  <div className="vote-placeholder" aria-hidden>
+                    <Typography.Text type="secondary">Waiting for the first vote...</Typography.Text>
+                  </div>
+                )}
+              </div>
 
               {isWaitingForNextMovie ? (
                 <div className="vote-bottom-waiting">
@@ -481,11 +583,7 @@ const VotePage: React.FC = () => {
                         ? "Waiting for other participants to vote..."
                         : "Waiting for the next movie..."}
                     </Typography.Text>
-                    {timeRemaining > 0 && (
-                      <Typography.Text strong>
-                        Next movie in {timeRemaining} seconds
-                      </Typography.Text>
-                    )}
+                  
                   </Space>
                 </div>
               ) : (
