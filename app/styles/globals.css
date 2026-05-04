@@ -53,7 +53,14 @@ a {
 
 /* Login, Register, Home and Profile Page Styles */
 .login-container,
-.card-container, 
+.card-container,
+.profile-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--background);
+}
 
 /* Vote page timer and progress */
 .vote-timer {
@@ -89,13 +96,6 @@ a {
 
 .vote-progress .ant-typography {
   font-weight: 600;
-}
-.profile-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: var(--background);
 }
 
 .login-button {
