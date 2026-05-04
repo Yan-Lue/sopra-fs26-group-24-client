@@ -4,6 +4,7 @@ import { useApi } from "@/hooks/useApi";
 import useLocalStorage from "@/hooks/useLocalStorage";
 import { UserOutlined } from "@ant-design/icons";
 import { Button, message } from "antd";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -97,6 +98,15 @@ const Navbar: React.FC = () => {
     {contextHolder}
     <header className="top-nav">
       <div className="top-nav-left">
+        <div className="top-nav-logo" onClick={() => router.push("/home")}>
+          <Image
+            src="/UWatchIcon.png"
+            alt="UWatch"
+            width={40}
+            height={40}
+            priority
+          />
+        </div>
         {navItems.map((item) => (
           <Button
             key={item.href}

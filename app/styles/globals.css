@@ -166,6 +166,46 @@ a {
   white-space: pre-wrap;
 }
 
+/* Slider Styles */
+
+.ui-slider { 
+  width: 100%;
+  max-width: 98%;
+  padding-inline: 12px;
+  margin: 8px auto 18px;
+}
+
+.ui-slider .ant-slider-rail {
+  background: rgba(255,255,255,0.06) !important;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.ui-slider .ant-slider-track {
+  background: var(--primary-gold) !important;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.ui-slider .ant-slider-mark-text {
+  color: rgba(245,230,211,0.70) !important;
+  transform: translateY(4px);
+  font-size: 14px;
+}
+
+.ui-slider .ant-slider-mark-text-active {
+  color: rgba(245,230,211,0.95) !important;
+  font-weight: 600;
+}
+
+.ui-slider.small {
+  width: 100%;
+  max-width: 220px;  
+  margin: 8px auto 18px;  
+  padding-inline: 0;   
+  box-sizing: content-box; 
+}
+
 /* Waitingroom Page Styles */
 .host-loading-wrap {
   display: flex;
@@ -440,7 +480,7 @@ color: var(--background) !important;
   gap: 6px;
 }
 
-/* Home and History Page Styles */
+/* Home, Play and History Page Styles */
 .home-container,
 .history-container {
   min-height: 100vh;
@@ -494,6 +534,30 @@ color: var(--background) !important;
   color: var(--text) !important;
 }
 
+.history-action-card.ant-card {
+  background-image: url('/HistoryPoster.png') !important;
+  background-color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important ;
+}
+
+.history-action-card .ant-card-body {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.play-action-card.ant-card {
+  background-image: url('/PlayPoster.png') !important;
+  background-color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important ;
+}
+
+.play-action-card .ant-card-body {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 /* Navbar Styles */
 .page-with-nav {
   min-height: 100vh;
@@ -519,6 +583,18 @@ color: var(--background) !important;
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.top-nav-logo {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+  transition: transform 0.2s ease;
+}
+
+.top-nav-logo img {
+  border-radius: 8px;
 }
 
 .top-nav-link.ant-btn {
@@ -1499,6 +1575,21 @@ hyphens: auto;
     padding: 4px 8px;
   }
 
+  .top-nav-logo {
+    margin-right: 8px;
+  }
+
+  .top-nav-logo img {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .top-nav-logo img {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px;
+}
+
   /* --- Login / Register --- */
   .login-container,
   .card-container,
@@ -1706,6 +1797,7 @@ hyphens: auto;
   .history-action-card.ant-card {
     max-width: 100%;
     flex-basis: 100%;
+    margin-top: 16px !important;
   }
 
   .home-actions,

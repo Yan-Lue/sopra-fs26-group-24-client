@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 const { Title, Paragraph } = Typography;
 
 const homeDescription =
-  "The ultimate movie decision app for friends. Swipe through movies together like Tinder and share your preferences to find the perfect film for your next movie night. No more endless debates – just swipe, match, and watch!";
+  "The ultimate movie decision app for friends. Vote on movies together and share your preferences to find the perfect film for your next movie night. No more endless debates – just vote, match, and watch!";
 
 const Home: React.FC = () => {
   const router = useRouter();
@@ -91,12 +91,12 @@ const Home: React.FC = () => {
           )}
 
           <div className="home-actions">
-            <Card hoverable className="home-action-card" onClick={() => router.push("/play")}>
+            <Card hoverable className="home-action-card play-action-card" onClick={() => router.push("/play")}>
               <Title>Play</Title>
               <Paragraph>Click here to create a new session or to join your friends.</Paragraph>
             </Card>
             
-            <Card hoverable className="home-action-card" onClick={handleHistoryCardClick}>
+            <Card hoverable className="home-action-card history-action-card" onClick={handleHistoryCardClick}>
               <Title>History</Title>
               <Paragraph>See your latest saved results here.</Paragraph>
             </Card>

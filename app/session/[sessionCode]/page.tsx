@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Form, Modal, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -29,14 +29,15 @@ interface FilterFormValues {
   rounds: number;
   timePerRound: number;
   minRating?: number;
-  releaseYear?: string;
+  releaseYearRange?: [number, number];
 }
 
 interface SessionFilterPutDTO {
   roundLimit: number;
   genres?: string[];
   minRating?: number;
-  releaseYear?: number;
+  minReleaseYear?: number;
+  maxReleaseYear?: number;  
   timePerRound: number;
 }
 
@@ -439,13 +440,15 @@ const SessionWaitingRoom: React.FC = () => {
       dto.genres = genres;
     }
 
-    if (typeof values.minRating === "number" && values.minRating > 0) {
+    if (typeof values.minRating === "number" && values.minRating >= 0) {
       dto.minRating = values.minRating;
     }
 
-    if (values.releaseYear && values.releaseYear !== "any") {
-      dto.releaseYear = Number(values.releaseYear);
-    }
+    if (values.releaseYearRange?.[0] && values.releaseYearRange?.[1]) {
+      const [minYear, maxYear] = values.releaseYearRange;
+      dto.minReleaseYear = minYear;
+      dto.maxReleaseYear = maxYear;
+    } 
 
     return dto;
   };
@@ -545,27 +548,43 @@ const SessionWaitingRoom: React.FC = () => {
         </Space>
       </Form.Item>
 
-      <Form.Item label="Minimum Rating" name="minRating">
-        <Select
+      <Form.Item 
+        label="Minimum Rating"
+        name="minRating"
+        valuePropName="value"
+        getValueFromEvent={(value) => value}
+      >
+        <Slider
           disabled={!isHost}
-          options={[
-            { value: 0, label: "Any rating" },
-            { value: 6, label: "6+" },
-            { value: 7, label: "7+" },
-            { value: 8, label: "8+" },
-          ]}
+          min={0}
+          max={10}
+          step={0.1}
+          className="ui-slider small"
+          marks={{
+            0: 'Any',
+            10: '10',
+          }}
+          tooltip={{ 
+            formatter: (value) => `${value}+` 
+          }}
         />
       </Form.Item>
 
-      <Form.Item label="Release Year" name="releaseYear">
-        <Select
+      <Form.Item label="Release Year Range" name="releaseYearRange">
+        <Slider
+          range
           disabled={!isHost}
-          options={[
-            { value: "any", label: "Any year" },
-            { value: "2020", label: "2020+" },
-            { value: "2010", label: "2010+" },
-            { value: "2000", label: "2000+" },
-          ]}
+          min={1960}
+          max={new Date().getFullYear()}
+          step={1}
+          className="ui-slider small"
+          marks={{
+            1960: '1960',
+            [new Date().getFullYear()]: `${new Date().getFullYear()}`
+          }}
+          tooltip={{ 
+            formatter: (value) => `${value}` 
+          }}
         />
       </Form.Item>
     </div>
@@ -586,7 +605,7 @@ const SessionWaitingRoom: React.FC = () => {
                 rounds: 5,
                 timePerRound: 15,
                 minRating: 0,
-                releaseYear: "any",
+                releaseYearRange: [1960, new Date().getFullYear()],
               }}
               onValuesChange={(_, allValues) => {
                 const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres);
@@ -617,7 +636,7 @@ const SessionWaitingRoom: React.FC = () => {
               </Typography.Title>
 
               <div className="session-code-row">
-                <Typography.Text className="host-meta-line">Session Code: {sessionCode}</Typography.Text>
+                <Typography.Text className="host-meta-line">Session Code: {sessionCode?.toUpperCase()}</Typography.Text>
                 <Button size="small" type="default" className="copy-link-btn" icon={<CopyOutlined />} aria-label="Copy Session Link" onClick={handleCopySessionLink}>
                 </Button>
               </div>
@@ -654,7 +673,7 @@ const SessionWaitingRoom: React.FC = () => {
                   </Button>
                 </>
               ) : (
-                <Button className="leave-session-btn" onClick={() => handleLeave()}>
+                <Button className="leave-session-btn" onClick={() => handleLeave()} loading={isLoading}>
                   Leave Session
                 </Button>
               )}
