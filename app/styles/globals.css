@@ -54,6 +54,42 @@ a {
 /* Login, Register, Home and Profile Page Styles */
 .login-container,
 .card-container, 
+
+/* Vote page timer and progress */
+.vote-timer {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 6px;
+}
+
+.vote-round {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 8px;
+  font-size: 14px;
+  color: rgba(245,230,211,0.8);
+}
+
+.vote-progress {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.vote-progress .vote-placeholder {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: rgba(245,230,211,0.8);
+}
+
+.vote-progress .ant-typography {
+  font-weight: 600;
+}
 .profile-container {
   display: flex;
   justify-content: center;
