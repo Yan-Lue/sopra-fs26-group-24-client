@@ -668,6 +668,113 @@ color: var(--background) !important;
   color: var(--accent);
 }
 
+.top-nav-center {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 340px;
+  margin: 0 16px;
+  position: relative;
+}
+
+.user-search-input.ant-input-affix-wrapper {
+  background: rgba(74, 31, 43, 0.25) !important;
+  border: 1px solid var(--secondary) !important;
+  border-radius: 999px !important;
+  color: var(--text) !important;
+  height: 38px;
+  padding: 4px 16px;
+}
+
+.user-search-input.ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  color: var(--text) !important;
+  font-size: 14px;
+}
+
+.user-search-input.ant-input-affix-wrapper .ant-input::placeholder {
+  color: rgba(245, 230, 211, 0.45) !important;
+}
+
+.user-search-input.ant-input-affix-wrapper .ant-input-prefix {
+  color: var(--accent) !important;
+  margin-inline-end: 8px;
+}
+
+.user-search-input.ant-input-affix-wrapper:focus-within {
+  border-color: var(--primary-gold) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.22) !important;
+}
+
+.user-search-input.ant-input-affix-wrapper .ant-input-clear-icon {
+  color: rgba(245, 230, 211, 0.4) !important;
+}
+
+.user-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--secondary);
+  border-radius: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1001;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.user-search-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(74, 31, 43, 0.3);
+}
+
+.user-search-item:last-child {
+  border-bottom: none;
+}
+
+.user-search-item:hover {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.user-search-item:first-child {
+  border-radius: 12px 12px 0 0;
+}
+
+.user-search-item:last-child {
+  border-radius: 0 0 12px 12px;
+}
+
+.user-search-item:only-child {
+  border-radius: 12px;
+}
+
+.user-search-item-name {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-search-item-bio {
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-search-empty {
+  padding: 14px 16px;
+  color: rgba(245, 230, 211, 0.45);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* Profile Page Styles */
 
 .profile-actions {
@@ -1641,6 +1748,11 @@ hyphens: auto;
     gap: 6px;
   }
 
+  .top-nav-center {
+    max-width: 220px;
+    margin: 0 10px;
+  }
+
   /* --- Login / Register --- */
   .login-card,
   .register-card {
@@ -1751,6 +1863,17 @@ hyphens: auto;
   .top-nav-left,
   .top-nav-right {
     gap: 4px;
+  }
+
+  .top-nav-center {
+    max-width: 140px;
+    margin: 0 6px;
+  }
+
+  .user-search-input.ant-input-affix-wrapper {
+    height: 32px;
+    padding: 2px 12px;
+    font-size: 12px;
   }
 
   .top-nav-link.ant-btn {
