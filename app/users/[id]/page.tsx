@@ -2,13 +2,14 @@
 
 import { useApi } from "@/hooks/useApi";
 import { User } from "@/types/user";
-import { UserOutlined, IdcardOutlined } from "@ant-design/icons";
-import { Avatar, Card, Input, Spin, Form } from "antd";
-import { useParams } from "next/navigation";
+import { ArrowLeftOutlined, UserOutlined, IdcardOutlined } from "@ant-design/icons";
+import { Avatar, Button, Card, Input, Spin, Form } from "antd";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const UserProfile: React.FC = () => {
   const apiService = useApi();
+  const router = useRouter();
   const params = useParams();
   const userId = params.id;
   const [user, setUser] = useState<User | null>(null);
@@ -59,6 +60,15 @@ const UserProfile: React.FC = () => {
   return (
     <div className="profile-container">
       <Card title={user.username} className="profile-card profile-edit-card">
+        <Button
+          type="link"
+          className="redirect-link"
+          onClick={() => router.push("/home")}
+          icon={<ArrowLeftOutlined />}
+          style={{ padding: 0, marginBottom: 16 }}
+        >
+          Back to Home
+        </Button>
         <div className="profile-avatar-wrap">
           <Avatar size={96} className="profile-avatar">
             {profileInitial}
