@@ -74,7 +74,7 @@ a {
   justify-content: center;
   margin: 6px 0 8px;
   font-size: 14px;
-  color: rgba(245,230,211,0.8);
+  color: rgba(245, 230, 211, 0.8);
 }
 
 .vote-progress {
@@ -86,12 +86,12 @@ a {
 }
 
 .vote-progress .vote-placeholder {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   padding: 6px 10px;
   border-radius: 8px;
   font-size: 14px;
-  color: rgba(245,230,211,0.8);
+  color: rgba(245, 230, 211, 0.8);
 }
 
 .vote-progress .ant-typography {
@@ -104,8 +104,8 @@ a {
 
 .login-card,
 .register-card,
-.play-card, 
-.profile-card, 
+.play-card,
+.profile-card,
 .home-action-card,
 .history-action-card.ant-card {
   background: var(--card) !important;
@@ -138,10 +138,10 @@ a {
   padding: 24px 32px;
 }
 
-.login-card .ant-form-item-label > label,
-.register-card .ant-form-item-label > label,
-.play-card .ant-form-item-label > label,
-.profile-card .ant-form-item-label > label {
+.login-card .ant-form-item-label>label,
+.register-card .ant-form-item-label>label,
+.play-card .ant-form-item-label>label,
+.profile-card .ant-form-item-label>label {
   color: var(--text) !important;
 }
 
@@ -198,13 +198,14 @@ a {
   color: var(--background) !important;
   width: 100%;
 }
+
 .play-description {
   white-space: pre-wrap;
 }
 
 /* Slider Styles */
 
-.ui-slider { 
+.ui-slider {
   width: 100%;
   max-width: 98%;
   padding-inline: 12px;
@@ -212,7 +213,7 @@ a {
 }
 
 .ui-slider .ant-slider-rail {
-  background: rgba(255,255,255,0.06) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   height: 6px;
   border-radius: 999px;
 }
@@ -224,22 +225,22 @@ a {
 }
 
 .ui-slider .ant-slider-mark-text {
-  color: rgba(245,230,211,0.70) !important;
+  color: rgba(245, 230, 211, 0.70) !important;
   transform: translateY(4px);
   font-size: 14px;
 }
 
 .ui-slider .ant-slider-mark-text-active {
-  color: rgba(245,230,211,0.95) !important;
+  color: rgba(245, 230, 211, 0.95) !important;
   font-weight: 600;
 }
 
 .ui-slider.small {
   width: 100%;
-  max-width: 220px;  
-  margin: 8px auto 18px;  
-  padding-inline: 0;   
-  box-sizing: content-box; 
+  max-width: 220px;
+  margin: 8px auto 18px;
+  padding-inline: 0;
+  box-sizing: content-box;
 }
 
 /* Waitingroom Page Styles */
@@ -285,6 +286,34 @@ a {
   gap: 4px;
 }
 
+.joined-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.user-tag {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.user-tag.host-tag {
+  color: var(--primary-gold);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.user-tag.you-tag {
+  color: rgba(212, 175, 55, 0.3);
+  background: rgba(92, 219, 211, 0.10);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
 .participant-waiting-text.ant-typography {
   color: var(--text) !important;
   font-size: 18px !important;
@@ -307,8 +336,8 @@ a {
   font-size: 40px !important;
 }
 
-.session-layout .host-card .ant-form-item-label > label,
-.session-layout .participant-card .ant-form-item-label > label {
+.session-layout .host-card .ant-form-item-label>label,
+.session-layout .participant-card .ant-form-item-label>label {
   font-size: 18px !important;
   color: var(--text) !important;
 }
@@ -343,18 +372,18 @@ a {
 }
 
 .session-side-card .ant-card-body {
-padding: 18px 18px 16px;
-display: flex;
-flex-direction: column;
-gap: 10px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .session-main-card .ant-card-body {
-padding: 20px 24px;
-min-height: 520px;
-display: flex;
-flex-direction: column;
-justify-content: space-between;
+  padding: 20px 24px;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .waiting-room-form {
@@ -365,7 +394,7 @@ justify-content: space-between;
 }
 
 .waiting-room-form .ant-form-item {
-margin-bottom: 8px !important;
+  margin-bottom: 8px !important;
 }
 
 .waiting-room-center {
@@ -387,43 +416,43 @@ margin-bottom: 8px !important;
 }
 
 .start-session-btn.ant-btn {
-background-color: var(--primary-gold) !important;
-border-color: var(--primary-gold) !important;
-color: var(--background) !important;
-min-width: 190px;
-align-self: center;
-font-weight: 600;
-max-width: 60%;
+  background-color: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
+  min-width: 190px;
+  align-self: center;
+  font-weight: 600;
+  max-width: 60%;
 }
 
 .end-session-btn.ant-btn,
 .leave-session-btn.ant-btn {
-background-color: rgba(255, 77, 79, 0.8) !important;
-border-color: rgba(255, 77, 79, 0.8) !important;
-color: var(--background) !important;
-min-width: 190px;
-align-self: center;
-font-weight: 600;
-max-width: 60%;
+  background-color: rgba(255, 77, 79, 0.8) !important;
+  border-color: rgba(255, 77, 79, 0.8) !important;
+  color: var(--background) !important;
+  min-width: 190px;
+  align-self: center;
+  font-weight: 600;
+  max-width: 60%;
 }
 
 .session-main-card .participant-settings,
 .session-main-card .host-session-meta {
-width: 100%;
-max-width: 640px;
-margin-left: auto;
-margin-right: auto;
+  width: 100%;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .session-main-card .participant-waiting-text.ant-typography {
-display: block;
-text-align: center;
-margin-top: 22px;
+  display: block;
+  text-align: center;
+  margin-top: 22px;
 }
 
 .session-main-card .ant-spin {
-margin: 42px auto 20px;
-display: block;
+  margin: 42px auto 20px;
+  display: block;
 }
 
 .session-main-card .host-loading-wrap {
@@ -435,17 +464,17 @@ display: block;
 }
 
 .session-main-card .ant-tag-checkable {
-border: 1px solid var(--secondary) !important;
-color: var(--text) !important;
-background: rgba(255, 255, 255, 0.02) !important;
-border-radius: 999px;
-padding: 6px 11px;
+  border: 1px solid var(--secondary) !important;
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 999px;
+  padding: 6px 11px;
 }
 
 .session-main-card .ant-tag-checkable-checked {
-background: var(--primary-gold) !important;
-border-color: var(--primary-gold) !important;
-color: var(--background) !important;
+  background: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
 }
 
 .session-filter-form .ant-form-item {
@@ -527,7 +556,7 @@ color: var(--background) !important;
   background: var(--background);
 }
 
-.home-intro, 
+.home-intro,
 .history-intro {
   text-align: center;
   max-width: 760px;
@@ -575,7 +604,7 @@ color: var(--background) !important;
   background-color: transparent !important;
   background-size: cover !important;
   background-position: center !important;
-  background-repeat: no-repeat !important ;
+  background-repeat: no-repeat !important;
 }
 
 .history-action-card .ant-card-body {
@@ -587,7 +616,7 @@ color: var(--background) !important;
   background-color: transparent !important;
   background-size: cover !important;
   background-position: center !important;
-  background-repeat: no-repeat !important ;
+  background-repeat: no-repeat !important;
 }
 
 .play-action-card .ant-card-body {
@@ -622,18 +651,18 @@ color: var(--background) !important;
 }
 
 .top-nav-logo {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    margin-right: 16px;
-    transition: transform 0.2s ease;
-    border: none;
-    background: none;
-    padding: 0;
-    font: inherit;
-    color: inherit;
-    border-radius: 8px;
-  }
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+  transition: transform 0.2s ease;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  border-radius: 8px;
+}
 
 .top-nav-logo:focus-visible {
   outline: 2px solid var(--primary-gold);
@@ -708,7 +737,7 @@ color: var(--background) !important;
   margin-bottom: 12px;
 }
 
-.profile-fields .ant-form-item-label > label {
+.profile-fields .ant-form-item-label>label {
   color: var(--text) !important;
   font-weight: 600;
 }
@@ -802,88 +831,88 @@ color: var(--background) !important;
 
 /* Vote Page Styles */
 .vote-card.ant-card {
-max-width: 430px;
+  max-width: 430px;
 }
 
 .vote-loading-wrap {
-min-height: 380px;
+  min-height: 380px;
 }
 
 .vote-waiting-wrap {
-min-height: 380px;
-text-align: center;
+  min-height: 380px;
+  text-align: center;
 }
 
 .vote-waiting-stack {
-align-items: center;
+  align-items: center;
 }
 
-.vote-waiting-title.ant-typography, 
+.vote-waiting-title.ant-typography,
 .vote-saved-text.ant-typography {
   margin: 0 !important;
   color: var(--text) !important;
 }
 
 .vote-screen {
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 14px;
-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
 }
 
 .vote-poster-wrap {
-width: 100%;
-max-width: 330px;
-border-radius: 24px;
-overflow: hidden;
-background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), rgba(45, 19, 25, 0.96));
-box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+  width: 100%;
+  max-width: 330px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.08), rgba(45, 19, 25, 0.96));
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
 }
 
 .vote-poster {
-display: block;
-width: 100%;
-aspect-ratio: 2 / 3;
-object-fit: cover;
-object-position: center;
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  object-position: center;
 }
 
 .vote-poster-placeholder {
-width: 100%;
-aspect-ratio: 2 / 3;
-display: flex;
-align-items: center;
-justify-content: center;
-color: var(--accent);
-background: rgba(255, 255, 255, 0.03);
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .vote-info {
-width: 100%;
-max-width: 330px;
-text-align: left;
+  width: 100%;
+  max-width: 330px;
+  text-align: left;
 }
 
 .vote-title.ant-typography {
-margin-bottom: 8px !important;
+  margin-bottom: 8px !important;
 }
 
 .vote-meta-row {
-margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 .vote-info .ant-typography,
 .vote-info .ant-typography h2 {
-color: var(--text) !important;
+  color: var(--text) !important;
 }
 
 .vote-description.ant-typography {
-color: rgba(245, 230, 211, 0.92) !important;
-line-height: 1.55;
-font-size: 15px;
-text-align: justify;
-hyphens: auto;
+  color: rgba(245, 230, 211, 0.92) !important;
+  line-height: 1.55;
+  font-size: 15px;
+  text-align: justify;
+  hyphens: auto;
 }
 
 .vote-actions {
@@ -1305,7 +1334,7 @@ hyphens: auto;
 }
 
 /* Modal Styles */
-.start-new-round-modal .ant-modal-content, 
+.start-new-round-modal .ant-modal-content,
 .leave-session-confirm-modal .ant-modal-content {
   background: var(--card) !important;
   border: 1px solid var(--secondary) !important;
@@ -1828,8 +1857,8 @@ hyphens: auto;
     font-size: 26px !important;
   }
 
-  .session-layout .host-card .ant-form-item-label > label,
-  .session-layout .participant-card .ant-form-item-label > label {
+  .session-layout .host-card .ant-form-item-label>label,
+  .session-layout .participant-card .ant-form-item-label>label {
     font-size: 15px !important;
   }
 

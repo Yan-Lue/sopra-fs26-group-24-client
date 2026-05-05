@@ -23,6 +23,7 @@ interface SessionResponse {
   joinedUsers?: number;
   usernames?: string[];
   sessionName?: string;
+  hostUsername?: string;
 }
 
 interface FilterFormValues {
@@ -45,6 +46,7 @@ interface LobbyUpdate {
   joinedUsers: number;
   maxPlayers: number;
   usernames?: string[];
+  hostUsername?: string;
 }
 
 interface MovieGetDTO {
@@ -110,6 +112,8 @@ const SessionWaitingRoom: React.FC = () => {
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
   const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const [hostUsername, setHostUsername] = useState<string | null>(null);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -171,6 +175,10 @@ const SessionWaitingRoom: React.FC = () => {
           "Session"
         );
 
+        // Read current user and host usernames for lobby tags
+        setCurrentUsername(localStorage.getItem("username"));
+        setHostUsername(sessionStorage.getItem(`hostUsername:${routeSessionCode}`));
+
         setIsValid(true);
         setIsLoading(false);
         return;
@@ -199,6 +207,10 @@ const SessionWaitingRoom: React.FC = () => {
           sessionStorage.getItem('sessionName') ??
           "Session"
         );
+
+        // Read current user and host usernames for lobby tags
+        setCurrentUsername(localStorage.getItem("username"));
+        setHostUsername(sessionStorage.getItem(`hostUsername:${routeSessionCode}`));
 
         setIsValid(true);
         setIsLoading(false);
@@ -230,6 +242,13 @@ const SessionWaitingRoom: React.FC = () => {
           setJoinedUsernames(session.usernames);
           sessionStorage.setItem(`joinedUsernames:${session.sessionCode}`, JSON.stringify(session.usernames));
         }
+
+        // Store and set host username for lobby tags
+        if (session.hostUsername) {
+          setHostUsername(session.hostUsername);
+          sessionStorage.setItem(`hostUsername:${session.sessionCode}`, session.hostUsername);
+        }
+        setCurrentUsername(localStorage.getItem("username"));
 
         setIsValid(true);
       } catch (error) {
@@ -270,6 +289,10 @@ const SessionWaitingRoom: React.FC = () => {
               if (payload.usernames) {
                 setJoinedUsernames(payload.usernames);
                 sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(payload.usernames));
+              }
+              if (payload.hostUsername) {
+                setHostUsername(payload.hostUsername);
+                sessionStorage.setItem(`hostUsername:${sessionCode}`, payload.hostUsername);
               }
             } catch (error) {
               //console.error("Failed to parse lobby update:", error);
@@ -686,9 +709,17 @@ const SessionWaitingRoom: React.FC = () => {
             <div className="participant-settings">
               {joinedUsernames.length > 0 ? (
                 joinedUsernames.map((username, i) => (
-                  <Typography.Text key={i} className="host-meta-line" style={{ display: "block" }}>
-                    {username}
-                  </Typography.Text>
+                  <div key={i} className="joined-user-row">
+                    <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
+                      {username}
+                    </Typography.Text>
+                    {hostUsername && username === hostUsername && (
+                      <span className="user-tag host-tag">(Host)</span>
+                    )}
+                    {currentUsername && username === currentUsername && (
+                      <span className="user-tag you-tag">(You)</span>
+                    )}
+                  </div>
                 ))
               ) : (
                 <Typography.Text className="host-meta-line">No users have joined</Typography.Text>

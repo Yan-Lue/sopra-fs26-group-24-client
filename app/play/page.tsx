@@ -34,6 +34,7 @@ interface SessionResponse {
   sessionToken: string;
   hostId: number;
   usernames?: string[];
+  hostUsername?: string;
 }
 
 interface SessionPutDTO {
@@ -127,6 +128,11 @@ const Play: React.FC = () => {
         sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(session.usernames));
       }
       sessionStorage.setItem(`sessionName:${sessionCode}`, trimmedSessionName);
+      // Store host username for lobby tags
+      const hostUsername = session.hostUsername ?? localStorage.getItem("username") ?? "";
+      if (hostUsername) {
+        sessionStorage.setItem(`hostUsername:${sessionCode}`, hostUsername);
+      }
 
       router.push(`/session/${sessionCode}`);
     } catch (error) {
