@@ -39,6 +39,7 @@ interface SessionFilterPutDTO {
   minReleaseYear?: number;
   maxReleaseYear?: number;  
   timePerRound: number;
+  providers?: string[];
 }
 
 interface LobbyUpdate {
@@ -89,6 +90,14 @@ const genreOptions = [
   "Western",
 ];
 
+const movieProviderOptions = [
+  "Netflix",
+  "DisneyPlus", 
+  "AppleTV",
+  "AmazonPrime",
+  "ParamountPlus"
+];
+
 const SessionWaitingRoom: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -110,6 +119,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
   const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -371,6 +381,20 @@ const SessionWaitingRoom: React.FC = () => {
     });
   };
 
+  // update DTO when new providers are selected or deselected, so that backend can build the session filters
+  const handleProviderToggle = (provider: string, checked: boolean) => {
+    setSelectedProviders((prev) => {
+      const next = checked ? [...prev, provider] : prev.filter((p) => p !== provider);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, selectedGenres);
+      
+      setSessionFilters(dto);
+
+      return next;
+    });
+  };
+
   const redirectHomeWithMessage = (info: string) => {
     sessionStorage.setItem("redirectInfo", info);
     leaveLocally();
@@ -555,6 +579,7 @@ const SessionWaitingRoom: React.FC = () => {
         getValueFromEvent={(value) => value}
       >
         <Slider
+          
           disabled={!isHost}
           min={0}
           max={10}
@@ -586,6 +611,21 @@ const SessionWaitingRoom: React.FC = () => {
             formatter: (value) => `${value}` 
           }}
         />
+      </Form.Item>
+
+      <Form.Item label="Providers">
+        <Space size={[8, 8]} wrap>
+          {movieProviderOptions.map((provider) => (
+            <Tag.CheckableTag
+              key={provider}
+              checked={selectedProviders.includes(provider)}
+              onChange={(checked) => handleProviderToggle(provider, checked)}
+              className={selectedProviders.includes(provider) ? "provider-chip active" : "provider-chip"}
+            >
+              {provider}
+            </Tag.CheckableTag>
+          ))}
+        </Space>
       </Form.Item>
     </div>
   );
