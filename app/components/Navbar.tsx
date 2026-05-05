@@ -23,6 +23,7 @@ const Navbar: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   // to check the stored string for Guest- prefix we need to parse it first, since we store it as JSON string
   const readStorageString = (key: string) => {
@@ -39,6 +40,7 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     const token = readStorageString("token");
     setIsGuest(token.startsWith("Guest-"));
+    setDisplayName(localStorage.getItem("username"));
   }, [pathname]);
 
   const isGuestUser = () => readStorageString("token").startsWith("Guest-");
@@ -121,26 +123,38 @@ const Navbar: React.FC = () => {
 
       <div className="top-nav-right">
           {isGuest ? (
-            <Button
-              type="primary"
-              className="top-nav-login"
-              onClick={handleGuestDeletion}
-            >
-              Login
-            </Button>
+            <>
+              <div className="top-nav-user-block">
+                {displayName && (
+                  <span className="top-nav-username">{displayName}</span>
+                )}
+              </div>
+              <Button
+                type="primary"
+                className="top-nav-login"
+                onClick={handleGuestDeletion}
+              >
+                Login
+              </Button>
+            </>
           ) : (
             <>
               <Button className="top-nav-logout" onClick={handleLogout}>
                 Logout
               </Button>
-              <Button
-                type="text"
-                shape="circle"
-                icon={<UserOutlined />}
-                className="top-nav-profile"
-                onClick={handleProfileClick}
-                aria-label="Profile"
-              />
+              <div className="top-nav-user-block" onClick={handleProfileClick} style={{ cursor: "pointer" }}>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<UserOutlined />}
+                  className="top-nav-profile"
+                  tabIndex={-1}
+                  aria-hidden
+                />
+                {displayName && (
+                  <span className="top-nav-username">{displayName}</span>
+                )}
+              </div>
             </>
           )}
         </div>
