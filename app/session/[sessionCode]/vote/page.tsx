@@ -182,6 +182,20 @@ const VotePage: React.FC = () => {
                 }
               },
             );
+
+            client.subscribe(
+              `/user/queue/current-movie`,
+              (frame: { body: string }) => {
+                try {
+                  const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
+                  setMovie(currentMovie);
+                  sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
+                } catch (error) {
+                  console.error("Failed to parse late-join movie:", error);
+                }
+              },
+            );
+
           client.subscribe(
             `/topic/session/${routeSessionCode}/next`,
             (frame: { body: string }) => {
@@ -421,59 +435,76 @@ const VotePage: React.FC = () => {
 
   const showVoteProgress = votesReceived > 0;
 
+  // Normal flow: WebSocket /topic/session/{sessionCode}/next delivers the next movie
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
       return;
     }
 
     let cancelled = false;
-    let isFetching = false;
+    let pollTimeoutId: number | null = null;
 
-    const pollCurrentMovie = async () => {
-      if (cancelled || isFetching) return;
+    const startEmergencyPolling = (attemptCount = 0) => {
+      if (cancelled) return;
 
-      isFetching = true;
+      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max) suggested by Claude in case of websocket issues, should be enough to cover most instability without overwhelming the server with requests
+      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
 
-      try {
-        const currentMovie = await apiService.get<MovieGetDTO>(
-            `/session/${routeSessionCode}/current`);
+      pollTimeoutId = window.setTimeout(async () => {
+        if (cancelled) return;
 
-        if (cancelled || !currentMovie) return;
+        try {
+          const currentMovie = await apiService.get<MovieGetDTO>(
+            `/session/${routeSessionCode}/current`
+          );
 
-        const currentMovieId = getMovieId(currentMovie);
-        const existingMovieId = getMovieId(movie);
-        if (currentMovieId === existingMovieId) return; // No change, don't update
+          if (cancelled || !currentMovie) return;
 
-        setMovie(currentMovie);
-        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
-      } catch (error) {
-        const apiError = error as { status?: number };
+          const currentMovieId = getMovieId(currentMovie);
+          const existingMovieId = getMovieId(movie);
+          if (currentMovieId === existingMovieId) {
+            // No change; schedule next retry
+            startEmergencyPolling(attemptCount + 1);
+            return;
+          }
 
-        // here again, currently rely on 409 from backend to indicate session end 
-        if (apiError?.status === 409) {
-          sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
-          sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
-          router.replace(`/session/${routeSessionCode}/results`);
-          return;
+          setMovie(currentMovie);
+          sessionStorage.setItem(
+            `currentMovie:${routeSessionCode}`,
+            JSON.stringify(currentMovie)
+          );
+        } catch (error) {
+          const apiError = error as { status?: number };
+
+          if (apiError?.status === 409) {
+            // Session ended
+            sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
+            sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
+            router.replace(`/session/${routeSessionCode}/results`);
+            return;
+          }
+
+          if (apiError?.status === 404) {
+            console.error("Emergency polling error", error);
+          }
+
+          // Continue polling with increased backoff
+          startEmergencyPolling(attemptCount + 1);
         }
-
-        if (apiError?.status === 404) {
-          console.error("Polling error", error);
-        }
-      } finally {
-        isFetching = false;
-      }
+      }, delay);
     };
 
-    pollCurrentMovie().catch(console.error);
-
-    const intervalId = setInterval(() => {
-      pollCurrentMovie().catch(console.error);
-    }, 1500);
+    // Only start polling if we're still waiting after 10s (WebSocket should have delivered by then)
+    const emergencyCheckId = window.setTimeout(() => {
+      if (!cancelled) {
+        startEmergencyPolling(0);
+      }
+    }, 10000);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
+      window.clearTimeout(emergencyCheckId);
     };
   }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService, router, movie]);
 
