@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tabs, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -112,7 +112,6 @@ const SessionWaitingRoom: React.FC = () => {
   const [joinedUsers, setJoinedUsers] = useState(0);
   const [joinedUsernames, setJoinedUsernames] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, contextHolderModal] = Modal.useModal();
   const [isStarting, setIsStarting] = useState(false);
@@ -531,12 +530,8 @@ const SessionWaitingRoom: React.FC = () => {
     return null;
   }
 
-  const mandatoryFilters = (
+  const mandatoryFiltersTab = (
     <>
-      <Typography.Title level={4} className="session-filter-group-title">
-        Mandatory Filters
-      </Typography.Title>
-
       <Form.Item
         label="Number of Rounds"
         name="rounds"
@@ -555,14 +550,8 @@ const SessionWaitingRoom: React.FC = () => {
     </>
   );
 
-  const optionalFilters = (
-    <div className={`optional-filters-panel ${showOptionalFilters ? "open" : ""}`}>
-      <Divider className="session-filter-divider" />
-
-      <Typography.Title level={4} className="session-filter-group-title">
-        Optional Filters
-      </Typography.Title>
-
+  const optionalFiltersTab = (
+    <>
       <Form.Item label="Genre">
         <Space size={[8, 8]} wrap>
           {genreOptions.map((genre) => (
@@ -585,7 +574,6 @@ const SessionWaitingRoom: React.FC = () => {
         getValueFromEvent={(value) => value}
       >
         <Slider
-          
           disabled={!isHost}
           min={0}
           max={10}
@@ -633,7 +621,7 @@ const SessionWaitingRoom: React.FC = () => {
           ))}
         </Space>
       </Form.Item>
-    </div>
+    </>
   );
 
   return (
@@ -658,18 +646,25 @@ const SessionWaitingRoom: React.FC = () => {
                 setSessionFilters(dto);
               }}
             >
-              {mandatoryFilters}
+              <Typography.Title level={4} className="session-filter-group-title">
+                Filter Settings
+              </Typography.Title>
 
-              <Button
-                type="default"
-                block
-                onClick={() => setShowOptionalFilters((prev) => !prev)}
-                className="optional-filters-toggle"
-              >
-                {showOptionalFilters ? "Hide Optional Filters" : "Show Optional Filters"}
-              </Button>
-
-              {optionalFilters}
+              <Tabs
+                items={[
+                  {
+                    key: "mandatory",
+                    label: "Mandatory Filters",
+                    children: mandatoryFiltersTab,
+                  },
+                  {
+                    key: "optional",
+                    label: "Optional Filters",
+                    children: optionalFiltersTab,
+                  },
+                ]}
+                className="session-filter-tabs"
+              />
             </Form>
           </Card>
         )}
