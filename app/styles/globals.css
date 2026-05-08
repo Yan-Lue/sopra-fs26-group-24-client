@@ -165,29 +165,6 @@ a {
   margin: 0;
 }
 
-.vote-floating-votecount-placeholder {
-  max-width: 170px;
-  text-align: center;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.16);
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: rgba(245,230,211,0.8);
-  align-self: center;
-}
-
-.vote-floating-votecount-placeholder .ant-typography {
-  color: rgba(245,230,211,0.8) !important;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  text-shadow: 
-    -1px -1px 0 rgba(0, 0, 0, 0.4),
-    1px -1px 0 rgba(0, 0, 0, 0.4),
-    -1px 1px 0 rgba(0, 0, 0, 0.4),
-    1px 1px 0 rgba(0, 0, 0, 0.4);
-}
-
 .vote-round {
   display: flex;
   justify-content: center;
@@ -1862,19 +1839,6 @@ hyphens: auto;
     font-size: 17px;
   }
 
-  .vote-floating-votecount-placeholder {
-    max-width: 150px;
-    text-align: center;
-    padding: 7px 9px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.16);
-    align-self: center;
-  }
-
-  .vote-floating-votecount-placeholder .ant-typography {
-    font-size: 12px;
-  }
-
   /* --- Results Page --- */
   .results-container {
     padding: 28px 20px 28px;
@@ -2063,19 +2027,6 @@ hyphens: auto;
 
   .vote-votecount-value.ant-typography {
     font-size: 14px;
-  }
-
-  .vote-floating-votecount-placeholder {
-    max-width: 126px;
-    text-align: center;
-    padding: 6px 8px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.16);
-    align-self: center;
-  }
-
-  .vote-floating-votecount-placeholder .ant-typography {
-    font-size: 11px;
   }
 
   .vote-title.ant-typography {
