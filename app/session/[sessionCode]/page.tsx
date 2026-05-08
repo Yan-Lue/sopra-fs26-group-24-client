@@ -290,6 +290,18 @@ const SessionWaitingRoom: React.FC = () => {
         );
 
         client.subscribe(
+          `/user/queue/current-movie`,
+          (frame: { body: string }) => {
+            try {
+              const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
+              redirectToVoteWithMovie(currentMovie);
+            } catch (error) {
+              console.error("Failed to parse late-join movie:", error);
+            }
+          },
+        );
+
+        client.subscribe(
           `/topic/session/${sessionCode}/next`,
           (frame: { body: string }) => {
             try {
@@ -318,43 +330,64 @@ const SessionWaitingRoom: React.FC = () => {
     sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
   }, [sessionCode, sessionFilters]);
 
-  // fallback polling for current movie in case a participant misses the websocket message when host starts the session, or if they refresh during the session
+  // Normal flow: WebSocket /topic/session/{sessionCode}/next triggers redirectToVoteWithMovie
   useEffect(() => {
     if (!isValid || !sessionCode || isHost) {
       return;
     }
 
     let isCancelled = false;
+    let pollTimeoutId: number | null = null;
 
-    const pollCurrentMovie = async () => {
+    const startEmergencyPolling = (attemptCount = 0) => {
       if (isCancelled || hasRedirectedRef.current) return;
 
-      try {
-        const current = await apiService.get<MovieGetDTO>(
-          `/session/${sessionCode}/current`
-        );
+      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max)
+      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
 
+      pollTimeoutId = window.setTimeout(async () => {
         if (isCancelled || hasRedirectedRef.current) return;
-        redirectToVoteWithMovie(current);
-      } catch (error) {
-        const apiError = error as { status?: number };
-        if (apiError?.status === 409) {
-          return;
+
+        try {
+          const current = await apiService.get<MovieGetDTO>(
+            `/session/${sessionCode}/current`
+          );
+
+          if (isCancelled || hasRedirectedRef.current) return;
+          redirectToVoteWithMovie(current);
+        } catch (error) {
+          const apiError = error as { status?: number };
+          if (apiError?.status === 409 || apiError?.status === 404) {
+            return;
+          }
+          // If still failing, schedule next retry with increased backoff
+          startEmergencyPolling(attemptCount + 1);
         }
-        if (apiError?.status === 404) {
-          return;
-        }
-      }
+      }, delay);
     };
 
-    void pollCurrentMovie();
-    const intervalId = window.setInterval(() => {
-      void pollCurrentMovie();
-    }, 1500);
+    // Only start polling if WebSocket somehow fails; normal path is /topic/session/{sessionCode}/next
+    // This is set by the WebSocket client if connection is lost
+    const checkAndStartEmergencyPolling = () => {
+      // Check if we have a WebSocket connection issue (you can add explicit state tracking here later)
+      // For now, we rely on the WebSocket subscription in the next useEffect
+      // If session started and no redirect happened, start emergency polling after 10s
+      const initialDelayBeforeEmergency = window.setTimeout(() => {
+        if (!hasRedirectedRef.current && !isCancelled) {
+          startEmergencyPolling(0);
+        }
+      }, 10000);
+
+      return () => window.clearTimeout(initialDelayBeforeEmergency);
+    };
+
+    // Start emergency polling only if WebSocket fails to deliver
+    const cleanup = checkAndStartEmergencyPolling();
 
     return () => {
       isCancelled = true;
-      window.clearInterval(intervalId);
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
+      cleanup();
     };
   }, [apiService, isHost, isValid, sessionCode]);
 
