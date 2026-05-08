@@ -432,8 +432,30 @@ const VotePage: React.FC = () => {
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
   const hasTimedOutCurrentMovie = hasRoundTimerStarted && timeRemaining <= 0;
   const isWaitingForNextMovie = hasRoundTimerStarted && (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
+  const displayedSeconds = Math.max(0, Math.ceil(timeRemaining));
+  //as precentage for circle progress
+  const timerProgress =
+    typeof timePerRound === "number" && timePerRound > 0
+      ? Math.max(0, Math.min(100, (displayedSeconds / timePerRound) * 100))
+      : 0;
+  const countdownRadius = 42;
+  const countdownStroke = 8;
+  const countdownCircumference = 2 * Math.PI * countdownRadius;
+  const countdownOffset = countdownCircumference - (timerProgress / 100) * countdownCircumference;
+  //additionally avoid 0division
+  const safeJoinedUsersCount = Math.max(joinedUsersCount, 1);
+  //math for circle progress of vote count
+  const voteProgress = Math.max(0, Math.min(100, (votesReceived / safeJoinedUsersCount) * 100));
+  const voteOffset = countdownCircumference - (voteProgress / 100) * countdownCircumference;
+  const hasRoundLimit = typeof totalRounds === "number" && totalRounds > 0;
+  const roundProgress = hasRoundLimit
+    ? Math.max(0, Math.min(100, (currentRound / totalRounds) * 100))
+    : 0;
+  const roundOffset = countdownCircumference - (roundProgress / 100) * countdownCircumference;
 
   const showVoteProgress = votesReceived > 0;
+
+  
 
   // Normal flow: WebSocket /topic/session/{sessionCode}/next delivers the next movie
   useEffect(() => {
@@ -528,7 +550,79 @@ const VotePage: React.FC = () => {
     <div className="page-with-nav">
       {contextHolder}
 
-      <div className="play-container">
+      {typeof timePerRound === "number" && timePerRound > 0 && (
+        <div className="vote-floating-timer" aria-live="polite">
+          <div className="vote-counter-stack">
+            <Typography.Text className="vote-counter-title">Timer</Typography.Text>
+            <div className="vote-countdown-circle">
+              <svg
+                className="vote-countdown-ring"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  className="vote-countdown-ring-track"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                />
+                <circle
+                  className="vote-countdown-ring-progress"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                  strokeDasharray={countdownCircumference}
+                  style={{ strokeDashoffset: countdownOffset }}
+                />
+              </svg>
+              <Typography.Text strong className="vote-countdown-seconds">
+                {displayedSeconds}
+              </Typography.Text>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="vote-floating-right-stack" aria-live="polite">
+        <div className="vote-floating-votecount">
+          <div className="vote-counter-stack vote-counter-stack-votes">
+            <Typography.Text className="vote-counter-title">Votes</Typography.Text>
+            <div className="vote-countdown-circle">
+              <svg
+                className="vote-countdown-ring"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  className="vote-countdown-ring-track"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                />
+                <circle
+                  className="vote-countdown-ring-progress"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                  strokeDasharray={countdownCircumference}
+                  style={{ strokeDashoffset: voteOffset }}
+                />
+              </svg>
+              <Typography.Text strong className="vote-votecount-value">
+                {votesReceived === 0 ? "0" : `${votesReceived}/${joinedUsersCount}`}
+              </Typography.Text>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="play-container vote-play-container">
         <Card className="play-card vote-card">
 
           {!movie ? (
@@ -537,6 +631,13 @@ const VotePage: React.FC = () => {
             </div>
           ) : (
             <div className="vote-screen">
+              {hasRoundLimit && (
+                <div className="vote-round-indicator">
+                  <Typography.Text className="vote-round-text">
+                    Round {currentRound}/{totalRounds}
+                  </Typography.Text>
+                </div>
+              )}
               <div className="vote-poster-wrap">
                 {posterUrl ? (
                   <img
@@ -575,34 +676,6 @@ const VotePage: React.FC = () => {
               <Divider />
 
             
-              {typeof timePerRound === "number" && timePerRound > 0 && (
-                <div className="vote-timer">
-                  <Typography.Text strong>
-                    Time left: {timeRemaining} second{timeRemaining === 1 ? "" : "s"}
-                  </Typography.Text>
-                </div>
-              )}
-
-              {totalRounds && (
-                <div className="vote-round">
-                  <Typography.Text>
-                    Round {currentRound} / {totalRounds}
-                  </Typography.Text>
-                </div>
-              )}
-
-              <div className="vote-progress">
-                {showVoteProgress ? (
-                  <Typography.Text>
-                    Voted: {votesReceived} / {joinedUsersCount}
-                  </Typography.Text>
-                ) : (
-                  <div className="vote-placeholder" aria-hidden>
-                    <Typography.Text type="secondary">Waiting for the first vote...</Typography.Text>
-                  </div>
-                )}
-              </div>
-
               {isWaitingForNextMovie ? (
                 <div className="vote-bottom-waiting">
                   <Space orientation="vertical" size={12} className="vote-waiting-stack">
