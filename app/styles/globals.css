@@ -478,6 +478,20 @@ color: var(--background) !important;
   color: var(--background) !important;
 }
 
+.provider-chip.ant-tag {
+  border: 1px solid var(--secondary) !important;
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.provider-chip.active.ant-tag {
+  background: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
+}
+
 .optional-filters-toggle.ant-btn {
   margin: 10px 0 6px;
   background: transparent !important;

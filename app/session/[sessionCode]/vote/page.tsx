@@ -35,6 +35,7 @@ interface MovieGetDTO {
   releaseDate: string;
   genres: string[];
   similarMovies?: unknown[];
+  streamingProviders?: string[];
 }
 
 interface VotePutDTO {
@@ -565,6 +566,24 @@ const VotePage: React.FC = () => {
                   {movie.genres?.map((genre) => (
                     <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}
+                  <div className="vote-providers">
+                    <Typography.Text type="secondary">
+                      Streaming Platforms:  
+                    </Typography.Text>
+                    <Space size={[6, 6]} wrap>
+                      {movie.streamingProviders?.length ? (
+                        movie.streamingProviders.map((provider) => (
+                          <Tag key={provider} color="purple">
+                            {provider}
+                          </Tag>
+                        ))
+                      ) : (
+                        <Typography.Text type="secondary">
+                          No streaming platform info.
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  </div>
                 </Space>
 
                 <Typography.Paragraph className="vote-description">
