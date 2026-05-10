@@ -136,7 +136,6 @@ const handleSaveToHistory = async () => {
   }
 };
 
-// TODO: redirect all users via websocket after host starts new round
 const handleStartNewRound = async () => {
     if (!isHost) {
     messageApi.warning("Only the host can start a new round.");

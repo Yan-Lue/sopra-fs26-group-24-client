@@ -66,10 +66,15 @@ const VotePage: React.FC = () => {
   const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
+
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
   const lastRoundIncrementMovieIdRef = useRef<number | null>(null);
+  const wsConnectedRef = useRef(false);
+  const wsConnectedAtRef = useRef<number | null>(null);
+  const lastNextMessageAtRef = useRef<number | null>(null);
+  const wsFallbackArmedRef = useRef(false);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -154,6 +159,11 @@ const VotePage: React.FC = () => {
         // --> may help with websocket instability 
         reconnectDelay: 500,
         onConnect: () => {
+            // Mark WebSocket as connected and record the time of connection
+            wsConnectedRef.current = true;
+            wsConnectedAtRef.current = Date.now();
+            wsFallbackArmedRef.current = false;
+
             //subcribe to vote progress updates(votes received/joined users)
             //get all votes and users and validate them before updating
             client.subscribe(
@@ -201,6 +211,9 @@ const VotePage: React.FC = () => {
             `/topic/session/${routeSessionCode}/next`,
             (frame: { body: string }) => {
               try {
+                // Mark that /next message was received and record the time
+                lastNextMessageAtRef.current = Date.now();
+
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
                 setVotesReceived(0);
@@ -247,8 +260,17 @@ const VotePage: React.FC = () => {
             router.replace(`/session/${routeSessionCode}/results`);
           });
         },
-        //log STOMP errors to console
+        onWebSocketClose: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
+        onWebSocketError: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
         onStompError: (frame: { headers: Record<string, string> }) => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
           console.error("STOMP error:", frame.headers["message"]);
           messageApi.error(`Connection error: ${frame.headers["message"]}`);
         },
@@ -267,6 +289,7 @@ const VotePage: React.FC = () => {
     });
 
     return () => {
+      wsConnectedRef.current = false; 
       if (activeClient) {
         void activeClient.deactivate();
       }
@@ -519,7 +542,10 @@ const VotePage: React.FC = () => {
 
     // Only start polling if we're still waiting after 10s (WebSocket should have delivered by then)
     const emergencyCheckId = window.setTimeout(() => {
-      if (!cancelled) {
+      if (cancelled) return;
+
+      // Poll only when websocket is unhealthy/disconnected.
+      if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
         startEmergencyPolling(0);
       }
     }, 10000);
@@ -668,9 +694,6 @@ const VotePage: React.FC = () => {
                     <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}
                   <div className="vote-providers">
-                    <Typography.Text type="secondary">
-                      Streaming Platforms:  
-                    </Typography.Text>
                     <Space size={[6, 6]} wrap>
                       {movie.streamingProviders?.length ? (
                         movie.streamingProviders.map((provider) => (
