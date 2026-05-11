@@ -559,8 +559,7 @@ const SessionWaitingRoom: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
-      const firstMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/next`);
-      redirectToVoteWithMovie(firstMovie);
+      await apiService.get(`/session/${sessionCode}/next`);
       messageApi.success("Session started! Redirecting...");
     } catch (error) {
       console.error("Failed to start session:", error);

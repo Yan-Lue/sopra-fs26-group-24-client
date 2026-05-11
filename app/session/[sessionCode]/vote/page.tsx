@@ -367,13 +367,7 @@ const VotePage: React.FC = () => {
       isAdvancingRef.current = true;
 
       try {
-        const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
-
-        setMovie(nextMovie);
-        setVotesReceived(0);
-        setHasRoundTimerStarted(false);
-
-        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+        await apiService.get(`/session/${routeSessionCode}/next`);
       } catch (error) {
         const apiError = error as { status?: number };
         if (apiError?.status === 409) {
