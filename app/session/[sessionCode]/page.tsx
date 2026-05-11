@@ -3,7 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
-import { CopyOutlined, UserOutlined } from "@ant-design/icons";
+import { CopyOutlined, ReloadOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
 import { Button, Card, Form, Modal, Select, Slider, Space, Spin, Tabs, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
@@ -42,10 +42,10 @@ interface SessionFilterPutDTO {
   providers?: string[];
 }
 
-interface LobbyUpdate {
+interface SessionStatusGetDTO {
   joinedUsers: number;
   maxPlayers: number;
-  usernames?: string[];
+  usernames: string[];
 }
 
 interface MovieGetDTO {
@@ -126,6 +126,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -143,6 +144,7 @@ const SessionWaitingRoom: React.FC = () => {
   const redirectToVoteWithMovie = (movie: MovieGetDTO) => {
     if (!sessionCode || hasRedirectedRef.current) return;
 
+    getJoinedUsers();
     hasRedirectedRef.current = true;
     sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
     sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(joinedUsers > 0 ? joinedUsers : 1));
@@ -279,25 +281,7 @@ const SessionWaitingRoom: React.FC = () => {
         wsConnectedAtRef.current = Date.now();
         wsFallbackArmedRef.current = false;
 
-        client.subscribe(
-          `/topic/session/${sessionCode}/lobby`,
-          (frame: { body: string }) => {
-            try {
-              const payload = JSON.parse(frame.body) as LobbyUpdate;
-              if (typeof payload.joinedUsers === "number") {
-                setJoinedUsers(payload.joinedUsers);
-                sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(payload.joinedUsers));
-              }
-              if (payload.usernames) {
-                setJoinedUsernames(payload.usernames);
-                sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(payload.usernames));
-              }
-            } catch (error) {
-              //console.error("Failed to parse lobby update:", error);
-              messageApi.error("A user left or joined, but the update could not be processed.");
-            }
-          },
-        );
+        
 
         client.subscribe(
           `/topic/session/${sessionCode}/end`,
@@ -363,6 +347,8 @@ const SessionWaitingRoom: React.FC = () => {
     if (!sessionCode || !sessionFilters) return;
     sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
   }, [sessionCode, sessionFilters]);
+
+
 
   // Normal flow: WebSocket /topic/session/{sessionCode}/next triggers redirectToVoteWithMovie
   useEffect(() => {
@@ -503,6 +489,45 @@ const SessionWaitingRoom: React.FC = () => {
       console.error("Failed to copy session link:", error);
       messageApi.error("Could not copy link. Please copy from browser address bar.");
     }
+  };
+
+  const handleToggleJoinedUsers = async () => {
+    if (!isHost || !sessionCode) return;
+
+    if (showJoinedUsers) {
+      setShowJoinedUsers(false);
+      return;
+    }
+
+    getJoinedUsers();
+    setShowJoinedUsers(true);
+  };
+
+  const getJoinedUsers = async () => {
+    if (!isHost || !sessionCode) return;
+
+    try {
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      if (!token) {
+        messageApi.error("No authentication token found.");
+        return;
+      }
+
+      const status = await apiService.getWithAuth<SessionStatusGetDTO>(`/session/${sessionCode}/users`, token);
+      setJoinedUsernames(status.usernames ?? []);
+    } catch (error) {
+      console.error("Failed to load joined users:", error);
+      messageApi.error("Could not load joined users.");
+    }
+  };
+  
+  const handleRefreshJoinedUsers = async () => {
+    if (!isHost || !sessionCode || isRefreshingUsers) return;
+
+    setIsRefreshingUsers(true);
+    getJoinedUsers().finally(() => {
+      setIsRefreshingUsers(false);
+    });
   };
 
   // take values from form, build DTO and send to backend to build session filters
@@ -736,18 +761,20 @@ const SessionWaitingRoom: React.FC = () => {
                 <Button size="small" type="default" className="copy-link-btn" icon={<CopyOutlined />} aria-label="Copy Session Link" onClick={handleCopySessionLink}>
                 </Button>
               </div>
-
+            
+            {isHost && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
-                  {joinedUsers} {joinedUsers === 1 ? "person has" : "people have"} joined
+                  Click to see who has joined
                 </Typography.Text>
                 <Button
                   shape="circle"
                   icon={<UserOutlined />}
-                  onClick={() => setShowJoinedUsers((prev) => !prev)}
+                  onClick={handleToggleJoinedUsers}
                   aria-label="Toggle Joined Users"
                 />
               </div>
+            )}
 
               <div className="host-loading-wrap">
                 <Spin size="large" />
@@ -777,8 +804,22 @@ const SessionWaitingRoom: React.FC = () => {
           </div>
         </Card>
 
-        {showJoinedUsers && (
-          <Card className="play-card session-side-card" title="Joined Users">
+        {isHost && showJoinedUsers && (
+          <Card
+            className="play-card session-side-card"
+            title={`${joinedUsernames.length} Users Joined `}
+            extra={
+              <Button
+                shape="square"
+                size="small"
+                type="default"
+                icon={<ReloadOutlined />}
+                loading={isRefreshingUsers}
+                onClick={handleRefreshJoinedUsers}
+                aria-label="Refresh Joined Users"
+              />
+            }
+          >
             <div className="participant-settings">
               {joinedUsernames.length > 0 ? (
                 joinedUsernames.map((username, i) => (

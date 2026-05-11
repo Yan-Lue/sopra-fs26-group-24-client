@@ -73,6 +73,27 @@ export class ApiService {
   }
 
   /**
+   * GET request with Authorization header. -->added for session users
+   * @param endpoint - The API endpoint (e.g. "/users").
+   * @param token - The authorization token.
+   * @returns JSON data of type T.
+   */
+  public async getWithAuth<T>(endpoint: string, token: string): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...this.defaultHeaders,
+        "Authorization": token,
+      },
+    });
+    return this.processResponse<T>(
+      res,
+      "An error occurred while fetching the data.\n",
+    );
+  }
+
+  /**
    * POST request.
    * @param endpoint - The API endpoint (e.g. "/users").
    * @param data - The payload to post.
