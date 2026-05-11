@@ -492,7 +492,7 @@ const SessionWaitingRoom: React.FC = () => {
   };
 
   const handleToggleJoinedUsers = async () => {
-    if (!isHost || !sessionCode) return;
+    if (!sessionCode) return;
 
     if (showJoinedUsers) {
       setShowJoinedUsers(false);
@@ -504,7 +504,7 @@ const SessionWaitingRoom: React.FC = () => {
   };
 
   const getJoinedUsers = async () => {
-    if (!isHost || !sessionCode) return;
+    if (!sessionCode) return;
 
     try {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
@@ -515,6 +515,7 @@ const SessionWaitingRoom: React.FC = () => {
 
       const status = await apiService.getWithAuth<SessionStatusGetDTO>(`/session/${sessionCode}/users`, token);
       setJoinedUsernames(status.usernames ?? []);
+      messageApi.success(`Loaded joined users.`);
     } catch (error) {
       console.error("Failed to load joined users:", error);
       messageApi.error("Could not load joined users.");
@@ -522,7 +523,7 @@ const SessionWaitingRoom: React.FC = () => {
   };
   
   const handleRefreshJoinedUsers = async () => {
-    if (!isHost || !sessionCode || isRefreshingUsers) return;
+    if (!sessionCode || isRefreshingUsers) return;
 
     setIsRefreshingUsers(true);
     getJoinedUsers().finally(() => {
@@ -762,7 +763,7 @@ const SessionWaitingRoom: React.FC = () => {
                 </Button>
               </div>
             
-            {isHost && (
+            
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
                   Click to see who has joined
@@ -774,7 +775,7 @@ const SessionWaitingRoom: React.FC = () => {
                   aria-label="Toggle Joined Users"
                 />
               </div>
-            )}
+            
 
               <div className="host-loading-wrap">
                 <Spin size="large" />
@@ -804,7 +805,7 @@ const SessionWaitingRoom: React.FC = () => {
           </div>
         </Card>
 
-        {isHost && showJoinedUsers && (
+        {showJoinedUsers && (
           <Card
             className="play-card session-side-card"
             title={`${joinedUsernames.length} Users Joined `}
