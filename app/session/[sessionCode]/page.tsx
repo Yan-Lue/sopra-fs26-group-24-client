@@ -150,6 +150,12 @@ const SessionWaitingRoom: React.FC = () => {
     router.replace(`/session/${sessionCode}/vote`);
   };
 
+  // keep a ref to always hold the latest redirectToVoteWithMovie
+  const redirectToVoteRef = useRef(redirectToVoteWithMovie);
+  useEffect(() => {
+    redirectToVoteRef.current = redirectToVoteWithMovie;
+  });
+
   useEffect(() => {
     const verifySessionAccess = async () => {
       const token = parseStorageValue<string>(localStorage.getItem("token"));
@@ -315,7 +321,7 @@ const SessionWaitingRoom: React.FC = () => {
           (frame: { body: string }) => {
             try {
               const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
-              redirectToVoteWithMovie(currentMovie);
+              redirectToVoteRef.current(currentMovie);
             } catch (error) {
               console.error("Failed to parse late-join movie:", error);
             }
@@ -329,7 +335,7 @@ const SessionWaitingRoom: React.FC = () => {
               // Mark that we received a /next message from WebSocket
               lastNextMessageAtRef.current = Date.now();
               const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
-              redirectToVoteWithMovie(nextMovie);
+              redirectToVoteRef.current(nextMovie);
             } catch (error) {
               messageApi.error("Failed to parse next movie update.");
             }
@@ -388,7 +394,7 @@ const SessionWaitingRoom: React.FC = () => {
           );
 
           if (isCancelled || hasRedirectedRef.current) return;
-          redirectToVoteWithMovie(current);
+          redirectToVoteRef.current(current);
         } catch (error) {
           const apiError = error as { status?: number };
           if (apiError?.status === 409 || apiError?.status === 404) {
@@ -561,6 +567,18 @@ const SessionWaitingRoom: React.FC = () => {
       //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
       await apiService.get(`/session/${sessionCode}/next`);
       messageApi.success("Session started! Redirecting...");
+
+      // if the WebSocket /next broadcast doesn't trigger a redirect
+      // within 3s, poll /current as a fallback so that users dont get left behind.
+      setTimeout(async () => {
+        if (hasRedirectedRef.current) return;
+        try {
+          const fallbackMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/current`);
+          redirectToVoteRef.current(fallbackMovie);
+        } catch {
+          // If /current also fails, the user stays in the lobby
+        }
+      }, 3000);
     } catch (error) {
       console.error("Failed to start session:", error);
       messageApi.error("Failed to start session. Please check your filter settings and try again.");
