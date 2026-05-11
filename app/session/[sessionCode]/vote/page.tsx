@@ -35,6 +35,7 @@ interface MovieGetDTO {
   releaseDate: string;
   genres: string[];
   similarMovies?: unknown[];
+  streamingProviders?: string[];
 }
 
 interface VotePutDTO {
@@ -65,10 +66,17 @@ const VotePage: React.FC = () => {
   const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
+
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
   const lastRoundIncrementMovieIdRef = useRef<number | null>(null);
+  const wsConnectedRef = useRef(false);
+  const wsConnectedAtRef = useRef<number | null>(null);
+  const lastNextMessageAtRef = useRef<number | null>(null);
+  const wsFallbackArmedRef = useRef(false);
+  const hasSeenFirstNextRef = useRef(false);
+  const waitingStartedAtRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -153,39 +161,70 @@ const VotePage: React.FC = () => {
         // --> may help with websocket instability 
         reconnectDelay: 500,
         onConnect: () => {
+            // Mark WebSocket as connected and record the time of connection
+            wsConnectedRef.current = true;
+            wsConnectedAtRef.current = Date.now();
+            wsFallbackArmedRef.current = false;
+
             //subcribe to vote progress updates(votes received/joined users)
             //get all votes and users and validate them before updating
+            client.subscribe(
+              `/topic/session/${routeSessionCode}/lobby`,
+              (frame: { body: string }) => {
+                try {
+                  const payload = JSON.parse(frame.body) as { joinedUsers?: unknown };
+                  const joinedNum = Number(payload.joinedUsers);
+                  if (!Number.isNaN(joinedNum) && joinedNum > 0) {
+                    setJoinedUsersCount(joinedNum);
+                    try { sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(joinedNum)); } catch {}
+                  }
+                } catch (err) {
+                  console.error("Failed to parse lobby update in vote page:", err);
+                }
+              },
+            );
+
             client.subscribe(
               `/topic/session/${routeSessionCode}/vote-progress`,
               (frame: { body: string }) => {
                 try {
-                  const payload = JSON.parse(frame.body) as unknown;
-                  if (payload && typeof payload === "object") {
-                    const votes = (payload as { votesReceived?: unknown }).votesReceived;
-                    const joined = (payload as { joinedUsers?: unknown }).joinedUsers;
-                    const votesNum = typeof votes === "number" ? votes : Number(votes ?? 0);
-                    const joinedNum = typeof joined === "number" ? joined : Number(joined ?? joinedUsersCount);
-                    const validJoined = Number.isNaN(joinedNum) ? joinedUsersCount : joinedNum;
-                    const validVotes = Number.isNaN(votesNum) ? 0 : votesNum;
+                  const payload = JSON.parse(frame.body) as { votesReceived?: unknown; joinedUsers?: unknown };
+                  const votesNum = Number(payload.votesReceived ?? 0);
+                  const joinedNum = Number(payload.joinedUsers ?? joinedUsersCount);
 
-                    setJoinedUsersCount(validJoined);
-
-                    setVotesReceived(validVotes);
-
-                    //persist joined users so other views can read it
-                    try {
-                      sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(validJoined));
-                    } catch {}
+                  if (!Number.isNaN(votesNum) && votesNum >= 0) {
+                    setVotesReceived(votesNum);
                   }
-                } catch (error) {
-                  console.error("Failed to parse vote-progress message:", error);
+                  if (!Number.isNaN(joinedNum) && joinedNum > 0) {
+                    setJoinedUsersCount(joinedNum);
+                    try { sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(joinedNum)); } catch {}
+                  }
+                } catch (err) {
+                  console.error("Failed to parse vote-progress message:", err);
                 }
               },
             );
+
+            client.subscribe(
+              `/user/queue/current-movie`,
+              (frame: { body: string }) => {
+                try {
+                  const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
+                  setMovie(currentMovie);
+                  sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
+                } catch (error) {
+                  console.error("Failed to parse late-join movie:", error);
+                }
+              },
+            );
+
           client.subscribe(
             `/topic/session/${routeSessionCode}/next`,
             (frame: { body: string }) => {
               try {
+                // Mark that /next message was received and record the time
+                lastNextMessageAtRef.current = Date.now();
+
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
                 setVotesReceived(0);
@@ -232,8 +271,17 @@ const VotePage: React.FC = () => {
             router.replace(`/session/${routeSessionCode}/results`);
           });
         },
-        //log STOMP errors to console
+        onWebSocketClose: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
+        onWebSocketError: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
         onStompError: (frame: { headers: Record<string, string> }) => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
           console.error("STOMP error:", frame.headers["message"]);
           messageApi.error(`Connection error: ${frame.headers["message"]}`);
         },
@@ -252,6 +300,7 @@ const VotePage: React.FC = () => {
     });
 
     return () => {
+      wsConnectedRef.current = false; 
       if (activeClient) {
         void activeClient.deactivate();
       }
@@ -319,7 +368,11 @@ const VotePage: React.FC = () => {
 
       try {
         const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
+
         setMovie(nextMovie);
+        setVotesReceived(0);
+        setHasRoundTimerStarted(false);
+
         sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
       } catch (error) {
         const apiError = error as { status?: number };
@@ -418,62 +471,108 @@ const VotePage: React.FC = () => {
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
   const hasTimedOutCurrentMovie = hasRoundTimerStarted && timeRemaining <= 0;
   const isWaitingForNextMovie = hasRoundTimerStarted && (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
+  const displayedSeconds = Math.max(0, Math.ceil(timeRemaining));
+  //as precentage for circle progress
+  const timerProgress =
+    typeof timePerRound === "number" && timePerRound > 0
+      ? Math.max(0, Math.min(100, (displayedSeconds / timePerRound) * 100))
+      : 0;
+  const countdownRadius = 42;
+  const countdownStroke = 8;
+  const countdownCircumference = 2 * Math.PI * countdownRadius;
+  const countdownOffset = countdownCircumference - (timerProgress / 100) * countdownCircumference;
+  //additionally avoid 0division
+  const safeJoinedUsersCount = Math.max(joinedUsersCount, 1);
+  //math for circle progress of vote count
+  const voteProgress = Math.max(0, Math.min(100, (votesReceived / safeJoinedUsersCount) * 100));
+  const voteOffset = countdownCircumference - (voteProgress / 100) * countdownCircumference;
+  const hasRoundLimit = typeof totalRounds === "number" && totalRounds > 0;
+  const roundProgress = hasRoundLimit
+    ? Math.max(0, Math.min(100, (currentRound / totalRounds) * 100))
+    : 0;
+  const roundOffset = countdownCircumference - (roundProgress / 100) * countdownCircumference;
 
   const showVoteProgress = votesReceived > 0;
 
+  
+
+  // Normal flow: WebSocket /topic/session/{sessionCode}/next delivers the next movie
   useEffect(() => {
     if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
       return;
     }
 
+    waitingStartedAtRef.current = Date.now();
     let cancelled = false;
-    let isFetching = false;
+    let pollTimeoutId: number | null = null;
 
-    const pollCurrentMovie = async () => {
-      if (cancelled || isFetching) return;
+    const startEmergencyPolling = (attemptCount = 0) => {
+      if (cancelled) return;
 
-      isFetching = true;
+      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max) suggested by Claude in case of websocket issues, should be enough to cover most instability without overwhelming the server with requests
+      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
 
-      try {
-        const currentMovie = await apiService.get<MovieGetDTO>(
-            `/session/${routeSessionCode}/current`);
+      pollTimeoutId = window.setTimeout(async () => {
+        if (cancelled) return;
 
-        if (cancelled || !currentMovie) return;
+        try {
+          const currentMovie = await apiService.get<MovieGetDTO>(
+            `/session/${routeSessionCode}/current`
+          );
 
-        const currentMovieId = getMovieId(currentMovie);
-        const existingMovieId = getMovieId(movie);
-        if (currentMovieId === existingMovieId) return; // No change, don't update
+          if (cancelled || !currentMovie) return;
 
-        setMovie(currentMovie);
-        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
-      } catch (error) {
-        const apiError = error as { status?: number };
+          const currentMovieId = getMovieId(currentMovie);
+          const existingMovieId = getMovieId(movie);
+          if (currentMovieId === existingMovieId) {
+            // No change; schedule next retry
+            startEmergencyPolling(attemptCount + 1);
+            return;
+          }
 
-        // here again, currently rely on 409 from backend to indicate session end 
-        if (apiError?.status === 409) {
-          sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
-          sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
-          router.replace(`/session/${routeSessionCode}/results`);
-          return;
+          setMovie(currentMovie);
+          setVotesReceived(0);
+          sessionStorage.setItem(`currentMovie:${routeSessionCode}`,JSON.stringify(currentMovie));
+        } catch (error) {
+          const apiError = error as { status?: number };
+
+          if (apiError?.status === 409) {
+            // Session ended
+            sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
+            sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
+            router.replace(`/session/${routeSessionCode}/results`);
+            return;
+          }
+
+          if (apiError?.status === 404) {
+            console.error("Emergency polling error", error);
+          }
+
+          // Continue polling with increased backoff
+          startEmergencyPolling(attemptCount + 1);
         }
-
-        if (apiError?.status === 404) {
-          console.error("Polling error", error);
-        }
-      } finally {
-        isFetching = false;
-      }
+      }, delay);
     };
 
-    pollCurrentMovie().catch(console.error);
+    // Only start polling if we're still waiting after 10s (WebSocket should have delivered by then)
+    const emergencyCheckId = window.setTimeout(() => {
+      if (cancelled) return;
 
-    const intervalId = setInterval(() => {
-      pollCurrentMovie().catch(console.error);
-    }, 1500);
+      // Poll only when websocket is unhealthy/disconnected.
+      if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
+        startEmergencyPolling(0);
+        return;
+      }
+      const waitingSince = waitingStartedAtRef.current ?? 0;
+      const lastNextAt = lastNextMessageAtRef.current ?? 0;
+      if (lastNextAt < waitingSince) startEmergencyPolling(0);
+    }, 2000);
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
+      window.clearTimeout(emergencyCheckId);
+      waitingStartedAtRef.current = null;
     };
   }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService, router, movie]);
 
@@ -497,7 +596,79 @@ const VotePage: React.FC = () => {
     <div className="page-with-nav">
       {contextHolder}
 
-      <div className="play-container">
+      {typeof timePerRound === "number" && timePerRound > 0 && (
+        <div className="vote-floating-timer" aria-live="polite">
+          <div className="vote-counter-stack">
+            <Typography.Text className="vote-counter-title">Timer</Typography.Text>
+            <div className="vote-countdown-circle">
+              <svg
+                className="vote-countdown-ring"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  className="vote-countdown-ring-track"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                />
+                <circle
+                  className="vote-countdown-ring-progress"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                  strokeDasharray={countdownCircumference}
+                  style={{ strokeDashoffset: countdownOffset }}
+                />
+              </svg>
+              <Typography.Text strong className="vote-countdown-seconds">
+                {displayedSeconds}
+              </Typography.Text>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="vote-floating-right-stack" aria-live="polite">
+        <div className="vote-floating-votecount">
+          <div className="vote-counter-stack vote-counter-stack-votes">
+            <Typography.Text className="vote-counter-title">Votes</Typography.Text>
+            <div className="vote-countdown-circle">
+              <svg
+                className="vote-countdown-ring"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <circle
+                  className="vote-countdown-ring-track"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                />
+                <circle
+                  className="vote-countdown-ring-progress"
+                  cx="50"
+                  cy="50"
+                  r={countdownRadius}
+                  strokeWidth={countdownStroke}
+                  strokeDasharray={countdownCircumference}
+                  style={{ strokeDashoffset: voteOffset }}
+                />
+              </svg>
+              <Typography.Text strong className="vote-votecount-value">
+                {`${votesReceived}/${joinedUsersCount}`}
+              </Typography.Text>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="play-container vote-play-container">
         <Card className="play-card vote-card">
 
           {!movie ? (
@@ -506,6 +677,13 @@ const VotePage: React.FC = () => {
             </div>
           ) : (
             <div className="vote-screen">
+              {hasRoundLimit && (
+                <div className="vote-round-indicator">
+                  <Typography.Text className="vote-round-text">
+                    Round {currentRound}/{totalRounds}
+                  </Typography.Text>
+                </div>
+              )}
               <div className="vote-poster-wrap">
                 {posterUrl ? (
                   <img
@@ -534,6 +712,21 @@ const VotePage: React.FC = () => {
                   {movie.genres?.map((genre) => (
                     <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}
+                  <div className="vote-providers">
+                    <Space size={[6, 6]} wrap>
+                      {movie.streamingProviders?.length ? (
+                        movie.streamingProviders.map((provider) => (
+                          <Tag key={provider} color="purple">
+                            {provider}
+                          </Tag>
+                        ))
+                      ) : (
+                        <Typography.Text type="secondary">
+                          No streaming platform info.
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  </div>
                 </Space>
 
                 <Typography.Paragraph className="vote-description">
@@ -544,34 +737,6 @@ const VotePage: React.FC = () => {
               <Divider />
 
             
-              {typeof timePerRound === "number" && timePerRound > 0 && (
-                <div className="vote-timer">
-                  <Typography.Text strong>
-                    Time left: {timeRemaining} second{timeRemaining === 1 ? "" : "s"}
-                  </Typography.Text>
-                </div>
-              )}
-
-              {totalRounds && (
-                <div className="vote-round">
-                  <Typography.Text>
-                    Round {currentRound} / {totalRounds}
-                  </Typography.Text>
-                </div>
-              )}
-
-              <div className="vote-progress">
-                {showVoteProgress ? (
-                  <Typography.Text>
-                    Voted: {votesReceived} / {joinedUsersCount}
-                  </Typography.Text>
-                ) : (
-                  <div className="vote-placeholder" aria-hidden>
-                    <Typography.Text type="secondary">Waiting for the first vote...</Typography.Text>
-                  </div>
-                )}
-              </div>
-
               {isWaitingForNextMovie ? (
                 <div className="vote-bottom-waiting">
                   <Space orientation="vertical" size={12} className="vote-waiting-stack">

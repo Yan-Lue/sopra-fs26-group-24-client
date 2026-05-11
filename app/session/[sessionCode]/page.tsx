@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Form, Modal, Select, Slider, Space, Spin, Tabs, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -40,6 +40,7 @@ interface SessionFilterPutDTO {
   minReleaseYear?: number;
   maxReleaseYear?: number;  
   timePerRound: number;
+  providers?: string[];
 }
 
 interface LobbyUpdate {
@@ -57,6 +58,7 @@ interface MovieGetDTO {
   rating: number;
   releaseDate: string;
   genres: string[];
+  streamingProviders?: string[];
 }
 
 // only in the frontend
@@ -91,6 +93,14 @@ const genreOptions = [
   "Western",
 ];
 
+const movieProviderOptions = [
+  "Netflix",
+  "DisneyPlus", 
+  "AppleTV",
+  "AmazonPrime",
+  "ParamountPlus"
+];
+
 const SessionWaitingRoom: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -104,16 +114,22 @@ const SessionWaitingRoom: React.FC = () => {
   const [joinedUsers, setJoinedUsers] = useState(0);
   const [joinedUsernames, setJoinedUsernames] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  const [showOptionalFilters, setShowOptionalFilters] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, contextHolderModal] = Modal.useModal();
   const [isStarting, setIsStarting] = useState(false);
+
   const hasRedirectedRef = useRef(false);
+  const wsConnectedRef = useRef(false);
+  const wsConnectedAtRef = useRef<number | null>(null);
+  const lastNextMessageAtRef = useRef<number | null>(null);
+  const wsFallbackArmedRef = useRef(false);
+
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
   const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [hostUsername, setHostUsername] = useState<string | null>(null);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -290,6 +306,11 @@ const SessionWaitingRoom: React.FC = () => {
       webSocketFactory: () => new SockJS(getSocketEndpoint()),
       reconnectDelay: 5000,
       onConnect: () => {
+        // Mark WebSocket as connected
+        wsConnectedRef.current = true;
+        wsConnectedAtRef.current = Date.now();
+        wsFallbackArmedRef.current = false;
+
         client.subscribe(
           `/topic/session/${sessionCode}/lobby`,
           (frame: { body: string }) => {
@@ -326,9 +347,23 @@ const SessionWaitingRoom: React.FC = () => {
         );
 
         client.subscribe(
+          `/user/queue/current-movie`,
+          (frame: { body: string }) => {
+            try {
+              const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
+              redirectToVoteWithMovie(currentMovie);
+            } catch (error) {
+              console.error("Failed to parse late-join movie:", error);
+            }
+          },
+        );
+
+        client.subscribe(
           `/topic/session/${sessionCode}/next`,
           (frame: { body: string }) => {
             try {
+              // Mark that we received a /next message from WebSocket
+              lastNextMessageAtRef.current = Date.now();
               const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
               redirectToVoteWithMovie(nextMovie);
             } catch (error) {
@@ -337,13 +372,24 @@ const SessionWaitingRoom: React.FC = () => {
           },
         );
       },
+      onWebSocketClose: () => {
+        wsConnectedRef.current = false;
+        wsFallbackArmedRef.current = true;
+      },
+      onWebSocketError: () => {
+        wsConnectedRef.current = false;
+        wsFallbackArmedRef.current = true;
+      },
       onStompError: (frame: { headers: Record<string, string> }) => {
+        wsConnectedRef.current = false;
+        wsFallbackArmedRef.current = true;
         console.error("STOMP error:", frame.headers["message"]);
       },
     });
     client.activate();
 
     return () => {
+      wsConnectedRef.current = false;
       void client.deactivate();
     };
   }, [isValid, sessionCode, router]);
@@ -354,43 +400,62 @@ const SessionWaitingRoom: React.FC = () => {
     sessionStorage.setItem(`sessionFilters:${sessionCode}`, JSON.stringify(sessionFilters));
   }, [sessionCode, sessionFilters]);
 
-  // fallback polling for current movie in case a participant misses the websocket message when host starts the session, or if they refresh during the session
+  // Normal flow: WebSocket /topic/session/{sessionCode}/next triggers redirectToVoteWithMovie
   useEffect(() => {
     if (!isValid || !sessionCode || isHost) {
       return;
     }
 
     let isCancelled = false;
+    let pollTimeoutId: number | null = null;
 
-    const pollCurrentMovie = async () => {
+    const startEmergencyPolling = (attemptCount = 0) => {
       if (isCancelled || hasRedirectedRef.current) return;
 
-      try {
-        const current = await apiService.get<MovieGetDTO>(
-          `/session/${sessionCode}/current`
-        );
+      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max)
+      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
 
+      pollTimeoutId = window.setTimeout(async () => {
         if (isCancelled || hasRedirectedRef.current) return;
-        redirectToVoteWithMovie(current);
-      } catch (error) {
-        const apiError = error as { status?: number };
-        if (apiError?.status === 409) {
-          return;
+
+        try {
+          const current = await apiService.get<MovieGetDTO>(
+            `/session/${sessionCode}/current`
+          );
+
+          if (isCancelled || hasRedirectedRef.current) return;
+          redirectToVoteWithMovie(current);
+        } catch (error) {
+          const apiError = error as { status?: number };
+          if (apiError?.status === 409 || apiError?.status === 404) {
+            return;
+          }
+          // If still failing, schedule next retry with increased backoff
+          startEmergencyPolling(attemptCount + 1);
         }
-        if (apiError?.status === 404) {
-          return;
-        }
-      }
+      }, delay);
     };
 
-    void pollCurrentMovie();
-    const intervalId = window.setInterval(() => {
-      void pollCurrentMovie();
-    }, 1500);
+    // Only start polling as true emergency if WebSocket failed to deliver
+    const checkAndStartEmergencyPolling = () => {
+      const initialDelayBeforeEmergency = window.setTimeout(() => {
+        if (isCancelled || hasRedirectedRef.current) return;
+
+        // Start polling only if websocket is unhealthy/disconnected.
+        if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
+          startEmergencyPolling(0);
+        }
+      }, 10000);
+
+      return () => window.clearTimeout(initialDelayBeforeEmergency);
+    };
+
+    const cleanup = checkAndStartEmergencyPolling();
 
     return () => {
       isCancelled = true;
-      window.clearInterval(intervalId);
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
+      cleanup();
     };
   }, [apiService, isHost, isValid, sessionCode]);
 
@@ -400,7 +465,21 @@ const SessionWaitingRoom: React.FC = () => {
       const next = checked ? [...prev, genre] : prev.filter((g) => g !== genre);
 
       const values = filterForm.getFieldsValue() as FilterFormValues;
-      const dto = buildSessionFilterDTO(values, next);
+      const dto = buildSessionFilterDTO(values, next, selectedProviders);
+      setSessionFilters(dto);
+
+      return next;
+    });
+  };
+
+  // update DTO when new providers are selected or deselected, so that backend can build the session filters
+  const handleProviderToggle = (provider: string, checked: boolean) => {
+    setSelectedProviders((prev) => {
+      const next = checked ? [...prev, provider] : prev.filter((p) => p !== provider);
+
+      const values = filterForm.getFieldsValue() as FilterFormValues;
+      const dto = buildSessionFilterDTO(values, selectedGenres, next);
+      
       setSessionFilters(dto);
 
       return next;
@@ -466,6 +545,7 @@ const SessionWaitingRoom: React.FC = () => {
   const buildSessionFilterDTO = (
     values: FilterFormValues,
     genres: string[],
+    providers: string[],
   ): SessionFilterPutDTO => {
     const dto: SessionFilterPutDTO = {
       roundLimit: values.rounds,
@@ -474,6 +554,10 @@ const SessionWaitingRoom: React.FC = () => {
 
     if (genres.length > 0) {
       dto.genres = genres;
+    }
+
+    if (providers.length > 0) {
+      dto.providers = providers;
     }
 
     if (typeof values.minRating === "number" && values.minRating >= 0) {
@@ -498,7 +582,7 @@ const SessionWaitingRoom: React.FC = () => {
       await filterForm.validateFields(["rounds", "timePerRound"]);
 
       const values = filterForm.getFieldsValue() as FilterFormValues;
-      const dto = buildSessionFilterDTO(values, selectedGenres);
+      const dto = buildSessionFilterDTO(values, selectedGenres, selectedProviders);
 
       setSessionFilters(dto);
 
@@ -537,12 +621,8 @@ const SessionWaitingRoom: React.FC = () => {
     return null;
   }
 
-  const mandatoryFilters = (
+  const mandatoryFiltersTab = (
     <>
-      <Typography.Title level={4} className="session-filter-group-title">
-        Mandatory Filters
-      </Typography.Title>
-
       <Form.Item
         label="Number of Rounds"
         name="rounds"
@@ -561,14 +641,8 @@ const SessionWaitingRoom: React.FC = () => {
     </>
   );
 
-  const optionalFilters = (
-    <div className={`optional-filters-panel ${showOptionalFilters ? "open" : ""}`}>
-      <Divider className="session-filter-divider" />
-
-      <Typography.Title level={4} className="session-filter-group-title">
-        Optional Filters
-      </Typography.Title>
-
+  const optionalFiltersTab = (
+    <>
       <Form.Item label="Genre">
         <Space size={[8, 8]} wrap>
           {genreOptions.map((genre) => (
@@ -623,7 +697,22 @@ const SessionWaitingRoom: React.FC = () => {
           }}
         />
       </Form.Item>
-    </div>
+
+      <Form.Item label="Providers">
+        <Space size={[8, 8]} wrap>
+          {movieProviderOptions.map((provider) => (
+            <Tag.CheckableTag
+              key={provider}
+              checked={selectedProviders.includes(provider)}
+              onChange={(checked) => handleProviderToggle(provider, checked)}
+              className={selectedProviders.includes(provider) ? "provider-chip active" : "provider-chip"}
+            >
+              {provider}
+            </Tag.CheckableTag>
+          ))}
+        </Space>
+      </Form.Item>
+    </>
   );
 
   return (
@@ -644,22 +733,29 @@ const SessionWaitingRoom: React.FC = () => {
                 releaseYearRange: [1960, new Date().getFullYear()],
               }}
               onValuesChange={(_, allValues) => {
-                const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres);
+                const dto = buildSessionFilterDTO(allValues as FilterFormValues, selectedGenres, selectedProviders);
                 setSessionFilters(dto);
               }}
             >
-              {mandatoryFilters}
+              <Typography.Title level={4} className="session-filter-group-title">
+                Filter Settings
+              </Typography.Title>
 
-              <Button
-                type="default"
-                block
-                onClick={() => setShowOptionalFilters((prev) => !prev)}
-                className="optional-filters-toggle"
-              >
-                {showOptionalFilters ? "Hide Optional Filters" : "Show Optional Filters"}
-              </Button>
-
-              {optionalFilters}
+              <Tabs
+                items={[
+                  {
+                    key: "mandatory",
+                    label: "Mandatory Filters",
+                    children: mandatoryFiltersTab,
+                  },
+                  {
+                    key: "optional",
+                    label: "Optional Filters",
+                    children: optionalFiltersTab,
+                  },
+                ]}
+                className="session-filter-tabs"
+              />
             </Form>
           </Card>
         )}
