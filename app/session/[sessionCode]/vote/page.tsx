@@ -66,10 +66,17 @@ const VotePage: React.FC = () => {
   const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
+
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
   const lastRoundIncrementMovieIdRef = useRef<number | null>(null);
+  const wsConnectedRef = useRef(false);
+  const wsConnectedAtRef = useRef<number | null>(null);
+  const lastNextMessageAtRef = useRef<number | null>(null);
+  const wsFallbackArmedRef = useRef(false);
+  const hasSeenFirstNextRef = useRef(false);
+  const waitingStartedAtRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -154,32 +161,46 @@ const VotePage: React.FC = () => {
         // --> may help with websocket instability 
         reconnectDelay: 500,
         onConnect: () => {
+            // Mark WebSocket as connected and record the time of connection
+            wsConnectedRef.current = true;
+            wsConnectedAtRef.current = Date.now();
+            wsFallbackArmedRef.current = false;
+
             //subcribe to vote progress updates(votes received/joined users)
             //get all votes and users and validate them before updating
+            client.subscribe(
+              `/topic/session/${routeSessionCode}/lobby`,
+              (frame: { body: string }) => {
+                try {
+                  const payload = JSON.parse(frame.body) as { joinedUsers?: unknown };
+                  const joinedNum = Number(payload.joinedUsers);
+                  if (!Number.isNaN(joinedNum) && joinedNum > 0) {
+                    setJoinedUsersCount(joinedNum);
+                    try { sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(joinedNum)); } catch {}
+                  }
+                } catch (err) {
+                  console.error("Failed to parse lobby update in vote page:", err);
+                }
+              },
+            );
+
             client.subscribe(
               `/topic/session/${routeSessionCode}/vote-progress`,
               (frame: { body: string }) => {
                 try {
-                  const payload = JSON.parse(frame.body) as unknown;
-                  if (payload && typeof payload === "object") {
-                    const votes = (payload as { votesReceived?: unknown }).votesReceived;
-                    const joined = (payload as { joinedUsers?: unknown }).joinedUsers;
-                    const votesNum = typeof votes === "number" ? votes : Number(votes ?? 0);
-                    const joinedNum = typeof joined === "number" ? joined : Number(joined ?? joinedUsersCount);
-                    const validJoined = Number.isNaN(joinedNum) ? joinedUsersCount : joinedNum;
-                    const validVotes = Number.isNaN(votesNum) ? 0 : votesNum;
+                  const payload = JSON.parse(frame.body) as { votesReceived?: unknown; joinedUsers?: unknown };
+                  const votesNum = Number(payload.votesReceived ?? 0);
+                  const joinedNum = Number(payload.joinedUsers ?? joinedUsersCount);
 
-                    setJoinedUsersCount(validJoined);
-
-                    setVotesReceived(validVotes);
-
-                    //persist joined users so other views can read it
-                    try {
-                      sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(validJoined));
-                    } catch {}
+                  if (!Number.isNaN(votesNum) && votesNum >= 0) {
+                    setVotesReceived(votesNum);
                   }
-                } catch (error) {
-                  console.error("Failed to parse vote-progress message:", error);
+                  if (!Number.isNaN(joinedNum) && joinedNum > 0) {
+                    setJoinedUsersCount(joinedNum);
+                    try { sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(joinedNum)); } catch {}
+                  }
+                } catch (err) {
+                  console.error("Failed to parse vote-progress message:", err);
                 }
               },
             );
@@ -201,6 +222,9 @@ const VotePage: React.FC = () => {
             `/topic/session/${routeSessionCode}/next`,
             (frame: { body: string }) => {
               try {
+                // Mark that /next message was received and record the time
+                lastNextMessageAtRef.current = Date.now();
+
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
                 setMovie(nextMovie);
                 setVotesReceived(0);
@@ -247,8 +271,17 @@ const VotePage: React.FC = () => {
             router.replace(`/session/${routeSessionCode}/results`);
           });
         },
-        //log STOMP errors to console
+        onWebSocketClose: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
+        onWebSocketError: () => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
+        },
         onStompError: (frame: { headers: Record<string, string> }) => {
+          wsConnectedRef.current = false;
+          wsFallbackArmedRef.current = true;
           console.error("STOMP error:", frame.headers["message"]);
           messageApi.error(`Connection error: ${frame.headers["message"]}`);
         },
@@ -267,6 +300,7 @@ const VotePage: React.FC = () => {
     });
 
     return () => {
+      wsConnectedRef.current = false; 
       if (activeClient) {
         void activeClient.deactivate();
       }
@@ -334,7 +368,11 @@ const VotePage: React.FC = () => {
 
       try {
         const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
+
         setMovie(nextMovie);
+        setVotesReceived(0);
+        setHasRoundTimerStarted(false);
+
         sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
       } catch (error) {
         const apiError = error as { status?: number };
@@ -464,6 +502,7 @@ const VotePage: React.FC = () => {
       return;
     }
 
+    waitingStartedAtRef.current = Date.now();
     let cancelled = false;
     let pollTimeoutId: number | null = null;
 
@@ -492,10 +531,8 @@ const VotePage: React.FC = () => {
           }
 
           setMovie(currentMovie);
-          sessionStorage.setItem(
-            `currentMovie:${routeSessionCode}`,
-            JSON.stringify(currentMovie)
-          );
+          setVotesReceived(0);
+          sessionStorage.setItem(`currentMovie:${routeSessionCode}`,JSON.stringify(currentMovie));
         } catch (error) {
           const apiError = error as { status?: number };
 
@@ -519,15 +556,23 @@ const VotePage: React.FC = () => {
 
     // Only start polling if we're still waiting after 10s (WebSocket should have delivered by then)
     const emergencyCheckId = window.setTimeout(() => {
-      if (!cancelled) {
+      if (cancelled) return;
+
+      // Poll only when websocket is unhealthy/disconnected.
+      if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
         startEmergencyPolling(0);
+        return;
       }
-    }, 10000);
+      const waitingSince = waitingStartedAtRef.current ?? 0;
+      const lastNextAt = lastNextMessageAtRef.current ?? 0;
+      if (lastNextAt < waitingSince) startEmergencyPolling(0);
+    }, 2000);
 
     return () => {
       cancelled = true;
       if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
       window.clearTimeout(emergencyCheckId);
+      waitingStartedAtRef.current = null;
     };
   }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService, router, movie]);
 
@@ -616,7 +661,7 @@ const VotePage: React.FC = () => {
                 />
               </svg>
               <Typography.Text strong className="vote-votecount-value">
-                {votesReceived === 0 ? "0" : `${votesReceived}/${joinedUsersCount}`}
+                {`${votesReceived}/${joinedUsersCount}`}
               </Typography.Text>
             </div>
           </div>
@@ -668,9 +713,6 @@ const VotePage: React.FC = () => {
                     <Tag color={"green"} key={genre}>{genre}</Tag>
                   ))}
                   <div className="vote-providers">
-                    <Typography.Text type="secondary">
-                      Streaming Platforms:  
-                    </Typography.Text>
                     <Space size={[6, 6]} wrap>
                       {movie.streamingProviders?.length ? (
                         movie.streamingProviders.map((provider) => (
