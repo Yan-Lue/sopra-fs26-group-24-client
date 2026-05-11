@@ -5,7 +5,7 @@ import { getApiDomain } from "@/utils/domain";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { CopyOutlined, UserOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Form, Modal, Select, Slider, Space, Spin, Tabs, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Form, Modal, Select, Slider, Space, Spin, Tabs, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
@@ -115,13 +115,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, contextHolderModal] = Modal.useModal();
   const [isStarting, setIsStarting] = useState(false);
-
   const hasRedirectedRef = useRef(false);
-  const wsConnectedRef = useRef(false);
-  const wsConnectedAtRef = useRef<number | null>(null);
-  const lastNextMessageAtRef = useRef<number | null>(null);
-  const wsFallbackArmedRef = useRef(false);
-
   const [sessionFilters, setSessionFilters] = useState<SessionFilterPutDTO | null>(null);
   const [showJoinedUsers, setShowJoinedUsers] = useState(false);
   const [sessionName, setSessionName] = useState<string>("Session");
@@ -274,11 +268,6 @@ const SessionWaitingRoom: React.FC = () => {
       webSocketFactory: () => new SockJS(getSocketEndpoint()),
       reconnectDelay: 5000,
       onConnect: () => {
-        // Mark WebSocket as connected
-        wsConnectedRef.current = true;
-        wsConnectedAtRef.current = Date.now();
-        wsFallbackArmedRef.current = false;
-
         client.subscribe(
           `/topic/session/${sessionCode}/lobby`,
           (frame: { body: string }) => {
@@ -326,8 +315,6 @@ const SessionWaitingRoom: React.FC = () => {
           `/topic/session/${sessionCode}/next`,
           (frame: { body: string }) => {
             try {
-              // Mark that we received a /next message from WebSocket
-              lastNextMessageAtRef.current = Date.now();
               const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
               redirectToVoteWithMovie(nextMovie);
             } catch (error) {
@@ -336,24 +323,13 @@ const SessionWaitingRoom: React.FC = () => {
           },
         );
       },
-      onWebSocketClose: () => {
-        wsConnectedRef.current = false;
-        wsFallbackArmedRef.current = true;
-      },
-      onWebSocketError: () => {
-        wsConnectedRef.current = false;
-        wsFallbackArmedRef.current = true;
-      },
       onStompError: (frame: { headers: Record<string, string> }) => {
-        wsConnectedRef.current = false;
-        wsFallbackArmedRef.current = true;
         console.error("STOMP error:", frame.headers["message"]);
       },
     });
     client.activate();
 
     return () => {
-      wsConnectedRef.current = false;
       void client.deactivate();
     };
   }, [isValid, sessionCode, router]);
@@ -400,13 +376,14 @@ const SessionWaitingRoom: React.FC = () => {
       }, delay);
     };
 
-    // Only start polling as true emergency if WebSocket failed to deliver
+    // Only start polling if WebSocket somehow fails; normal path is /topic/session/{sessionCode}/next
+    // This is set by the WebSocket client if connection is lost
     const checkAndStartEmergencyPolling = () => {
+      // Check if we have a WebSocket connection issue (you can add explicit state tracking here later)
+      // For now, we rely on the WebSocket subscription in the next useEffect
+      // If session started and no redirect happened, start emergency polling after 10s
       const initialDelayBeforeEmergency = window.setTimeout(() => {
-        if (isCancelled || hasRedirectedRef.current) return;
-
-        // Start polling only if websocket is unhealthy/disconnected.
-        if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
+        if (!hasRedirectedRef.current && !isCancelled) {
           startEmergencyPolling(0);
         }
       }, 10000);
@@ -414,6 +391,7 @@ const SessionWaitingRoom: React.FC = () => {
       return () => window.clearTimeout(initialDelayBeforeEmergency);
     };
 
+    // Start emergency polling only if WebSocket fails to deliver
     const cleanup = checkAndStartEmergencyPolling();
 
     return () => {
