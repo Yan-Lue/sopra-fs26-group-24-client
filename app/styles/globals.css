@@ -953,20 +953,19 @@ align-items: center;
 gap: 14px;
 width: 100%;
 animation: voteSlideIn 1500ms ease both;
-animation-delay: 0ms;
 }
 
 @keyframes voteSlideIn {
   0% {
     opacity: 0;
-    transform: translateX(30px) scale(0.97);
+    transform: translateX(30px) scale(0.9);
   }
   15% {
-    opacity: 0;
+    opacity: 0.2;
   }
   50% {
     opacity: 0.7;
-    transform: translateX(8px) scale(0.995);
+    transform: translateX(8px) scale(0.95);
   }
   100% {
     opacity: 1;
