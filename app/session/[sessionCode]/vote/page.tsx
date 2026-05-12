@@ -7,7 +7,7 @@ import { CloseOutlined, HeartFilled, MinusOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
 import { Button, Card, Divider, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 
 //useRef allows us to keep track of whether we're currently advancing to the next movie, preventing multiple simultaneous advances if the timer triggers while an advance is already in progress.
@@ -66,6 +66,9 @@ const VotePage: React.FC = () => {
   const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
+  const [transitionClass, setTransitionClass] = useState("");
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const hasDisplayedMovieRef = useRef(false);
 
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
@@ -90,6 +93,19 @@ const VotePage: React.FC = () => {
     if (movie.posterPath.startsWith("http")) return movie.posterPath;
     return `https://image.tmdb.org/t/p/w500${movie.posterPath}`;
   }, [movie]);
+
+  const transitionToMovie = useCallback((newMovie: MovieGetDTO, onSwap?: () => void) => {
+    setMovie(newMovie);
+    onSwap?.();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        window.clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getSocketEndpoint = () => {
     const apiDomain = getApiDomain().replace(/\/$/, "");
@@ -152,6 +168,7 @@ const VotePage: React.FC = () => {
         sessionStorage.getItem(`currentMovie:${routeSessionCode}`),
       );
       if (cachedMovie) {
+        hasDisplayedMovieRef.current = true;
         setMovie(cachedMovie);
       }
 
@@ -210,6 +227,7 @@ const VotePage: React.FC = () => {
               (frame: { body: string }) => {
                 try {
                   const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
+                  hasDisplayedMovieRef.current = true;
                   setMovie(currentMovie);
                   sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
                 } catch (error) {
@@ -226,15 +244,16 @@ const VotePage: React.FC = () => {
                 lastNextMessageAtRef.current = Date.now();
 
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
-                setMovie(nextMovie);
-                setVotesReceived(0);
-                setHasRoundTimerStarted(false);
-                const currentMovieId = typeof nextMovie.movieId === "number" ? nextMovie.movieId : null;
-                if (currentMovieId && currentMovieId !== lastRoundIncrementMovieIdRef.current) {
-                  lastRoundIncrementMovieIdRef.current = currentMovieId;
-                  setCurrentRound((prev) => prev + 1);
-                }
-                sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+                transitionToMovie(nextMovie, () => {
+                  setVotesReceived(0);
+                  setHasRoundTimerStarted(false);
+                  const mid = typeof nextMovie.movieId === "number" ? nextMovie.movieId : null;
+                  if (mid && mid !== lastRoundIncrementMovieIdRef.current) {
+                    lastRoundIncrementMovieIdRef.current = mid;
+                    setCurrentRound((prev) => prev + 1);
+                  }
+                  sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+                });
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
               }
@@ -369,11 +388,11 @@ const VotePage: React.FC = () => {
       try {
         const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
 
-        setMovie(nextMovie);
-        setVotesReceived(0);
-        setHasRoundTimerStarted(false);
-
-        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+        transitionToMovie(nextMovie, () => {
+          setVotesReceived(0);
+          setHasRoundTimerStarted(false);
+          sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+        });
       } catch (error) {
         const apiError = error as { status?: number };
         if (apiError?.status === 409) {
@@ -530,9 +549,10 @@ const VotePage: React.FC = () => {
             return;
           }
 
-          setMovie(currentMovie);
-          setVotesReceived(0);
-          sessionStorage.setItem(`currentMovie:${routeSessionCode}`,JSON.stringify(currentMovie));
+          transitionToMovie(currentMovie, () => {
+            setVotesReceived(0);
+            sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
+          });
         } catch (error) {
           const apiError = error as { status?: number };
 
@@ -676,7 +696,7 @@ const VotePage: React.FC = () => {
               <Spin size="large" />
             </div>
           ) : (
-            <div className="vote-screen">
+            <div key={movie.movieId} className="vote-screen">
               {hasRoundLimit && (
                 <div className="vote-round-indicator">
                   <Typography.Text className="vote-round-text">
