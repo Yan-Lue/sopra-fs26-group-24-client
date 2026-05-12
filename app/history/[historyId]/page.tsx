@@ -194,20 +194,18 @@ const HistoryDetailPage: React.FC = () => {
                               </div>
                             )}
 
-                            <div className="vote-providers" style={{ marginTop: 8 }}>
-                              <Space size={[6, 6]} wrap>
-                                {(movie?.streamingProviders ?? []).length > 0 ? (
-                                  movie!.streamingProviders!.map((provider) => (
-                                    <Tag key={provider} color="purple">
-                                      {provider}
-                                    </Tag>
-                                  ))
-                                ) : (
-                                  <Text type="secondary">
-                                    No streaming platform info.
-                                  </Text>
-                                )}
-                              </Space>
+                            <div className="result-tags-row">
+                              {(movie?.streamingProviders ?? []).length > 0 ? (
+                                movie!.streamingProviders!.map((provider) => (
+                                  <span key={provider} className="result-tag">
+                                    {provider}
+                                  </span>
+                                ))
+                              ) : (
+                                <Text type="secondary">
+                                  No streaming platform info.
+                                </Text>
+                              )}
                             </div>
                           </div>
                         </div>

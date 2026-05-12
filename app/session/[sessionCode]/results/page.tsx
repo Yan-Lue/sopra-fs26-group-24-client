@@ -324,20 +324,18 @@ return (
                                 ))}
                             </div>
 
-                            <div className="vote-providers" style={{ marginTop: 8 }}>
-                                <Space size={[6, 6]} wrap>
-                                    {(providerMap[movie.movieId] ?? []).length > 0 ? (
-                                        providerMap[movie.movieId].map((provider) => (
-                                            <Tag key={provider} color="purple">
-                                                {provider}
-                                            </Tag>
-                                        ))
-                                    ) : (
-                                        <Typography.Text type="secondary">
-                                            No streaming platform info.
-                                        </Typography.Text>
-                                    )}
-                                </Space>
+                            <div className="result-tags-row">
+                                {(providerMap[movie.movieId] ?? []).length > 0 ? (
+                                    providerMap[movie.movieId].map((provider) => (
+                                        <span key={provider} className="result-tag">
+                                            {provider}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <Typography.Text type="secondary">
+                                        No streaming platform info.
+                                    </Typography.Text>
+                                )}
                             </div>
 
                             <Collapse
