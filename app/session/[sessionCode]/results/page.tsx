@@ -3,7 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Collapse, Form, Input, Modal, Select, Spin, Typography, message } from "antd";
+import { Button, Card, Collapse, Form, Input, Modal, Select, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -66,6 +66,7 @@ const [isSavingToHistory, setIsSavingToHistory] = useState(false);
 const [isGuest, setIsGuest] = useState(false);
 const [isHistorySaved, setIsHistorySaved] = useState(false);
 const [isModalVisible, setIsModalVisible] = useState(false);
+const [providerMap, setProviderMap] = useState<Record<number, string[]>>({});
 const [createForm] = Form.useForm<CreateSessionFormValues>();
 const [modal, contextHolderModal] = Modal.useModal();
 
@@ -112,6 +113,28 @@ useEffect(() => {
 
     void loadResults();
 }, [apiService, messageApi, routeSessionCode, router]);
+
+useEffect(() => {
+    if (movieResults.length === 0) return;
+
+    const fetchProviders = async () => {
+        const entries: [number, string[]][] = await Promise.all(
+            movieResults.map(async (movie) => {
+                try {
+                    const details = await apiService.get<{ streamingProviders?: string[] }>(
+                        `/movies/${movie.movieId}`,
+                    );
+                    return [movie.movieId, details.streamingProviders ?? []] as [number, string[]];
+                } catch {
+                    return [movie.movieId, []] as [number, string[]];
+                }
+            }),
+        );
+        setProviderMap(Object.fromEntries(entries));
+    };
+
+    void fetchProviders();
+}, [movieResults, apiService]);
 
 const handleSaveToHistory = async () => {
   if (isGuest || isHistorySaved) return;
@@ -299,6 +322,22 @@ return (
                                     {genre}
                                 </span>
                                 ))}
+                            </div>
+
+                            <div className="vote-providers" style={{ marginTop: 8 }}>
+                                <Space size={[6, 6]} wrap>
+                                    {(providerMap[movie.movieId] ?? []).length > 0 ? (
+                                        providerMap[movie.movieId].map((provider) => (
+                                            <Tag key={provider} color="purple">
+                                                {provider}
+                                            </Tag>
+                                        ))
+                                    ) : (
+                                        <Typography.Text type="secondary">
+                                            No streaming platform info.
+                                        </Typography.Text>
+                                    )}
+                                </Space>
                             </div>
 
                             <Collapse
