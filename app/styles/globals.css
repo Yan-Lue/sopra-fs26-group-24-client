@@ -817,25 +817,26 @@ a {
 
 .top-nav-profile.ant-btn {
   color: var(--accent);
+  font-size: 24px;
 }
 
 .top-nav-user-block {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   min-width: 0;
 }
 
 .top-nav-username {
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
   color: var(--accent);
   line-height: 1.2;
-  max-width: 100px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: center;
 }
 
 /* Profile Page Styles */
@@ -859,7 +860,7 @@ a {
   color: var(--primary-gold) !important;
   border: 2px solid var(--accent);
   font-family: "Cormorant", serif;
-  font-size: 46px !important;
+  font-size: 48px !important;
   font-weight: 700;
   line-height: 1;
 }
