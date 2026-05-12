@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
 import { parseStorageValue } from "@/utils/storage";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Typography, message } from "antd";
+import { Button, Card, Space, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -32,6 +32,7 @@ interface MovieInfo {
   rating?: number;
   releaseDate?: string;
   genres?: string[];
+  streamingProviders?: string[];
 }
 
 const HistoryDetailPage: React.FC = () => {
@@ -192,6 +193,22 @@ const HistoryDetailPage: React.FC = () => {
                                 ))}
                               </div>
                             )}
+
+                            <div className="vote-providers" style={{ marginTop: 8 }}>
+                              <Space size={[6, 6]} wrap>
+                                {(movie?.streamingProviders ?? []).length > 0 ? (
+                                  movie!.streamingProviders!.map((provider) => (
+                                    <Tag key={provider} color="purple">
+                                      {provider}
+                                    </Tag>
+                                  ))
+                                ) : (
+                                  <Text type="secondary">
+                                    No streaming platform info.
+                                  </Text>
+                                )}
+                              </Space>
+                            </div>
                           </div>
                         </div>
                       </div>
