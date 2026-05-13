@@ -46,6 +46,19 @@ interface VotePutDTO {
   token: string;
 }
 
+interface SessionStateGetDTO {
+  sessionCode: string;
+  status: "WAITING" | "PLAYING" | "ENDED" | "CANCELED";
+  currentMovieIndex: number;
+  currentMovie: MovieGetDTO | null;
+  roundStartedAt: string | null;
+  timePerRound: number;
+  joinedUsers: number;
+  votesReceived: number;
+  totalRounds: number;
+  usernames?: string[];
+}
+
 const VotePage: React.FC = () => {
   const apiService = useApi();
   const router = useRouter();
@@ -66,17 +79,18 @@ const VotePage: React.FC = () => {
   const [hasRoundTimerStarted, setHasRoundTimerStarted] = useState(false);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
+  const [roundStartedAt, setRoundStartedAt] = useState<string | null>(null);
 
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
   const lastMovieIdRef = useRef<number | null>(null);
   const lastRoundIncrementMovieIdRef = useRef<number | null>(null);
+  const currentMovieIdRef = useRef<number | null>(null);
+  const stateFetchInFlightRef = useRef(false);
   const wsConnectedRef = useRef(false);
   const wsConnectedAtRef = useRef<number | null>(null);
   const lastNextMessageAtRef = useRef<number | null>(null);
   const wsFallbackArmedRef = useRef(false);
-  const hasSeenFirstNextRef = useRef(false);
-  const waitingStartedAtRef = useRef<number | null>(null);
 
   const getMovieId = (m: MovieGetDTO | (MovieGetDTO & { id?: number }) | null): number | null => {
     if (!m) return null;
@@ -94,6 +108,92 @@ const VotePage: React.FC = () => {
   const getSocketEndpoint = () => {
     const apiDomain = getApiDomain().replace(/\/$/, "");
     return `${apiDomain}/gs-guide-websocket`;
+  };
+
+  const calculateRemainingSeconds = (startedAt: string | null, secondsPerRound: number | null) => {
+    if (!startedAt || !secondsPerRound || secondsPerRound <= 0) {
+      return secondsPerRound ?? 0;
+    }
+
+    const startedMs = new Date(startedAt).getTime();
+    if (Number.isNaN(startedMs)) {
+      return secondsPerRound;
+    }
+
+    const elapsedSeconds = Math.floor((Date.now() - startedMs) / 1000);
+    return Math.max(0, secondsPerRound - elapsedSeconds);
+  };
+
+  const applySessionState = (state: SessionStateGetDTO) => {
+    if (state.sessionCode !== routeSessionCode) return;
+
+    if (state.status === "CANCELED") {
+      sessionStorage.setItem(
+        "redirectInfo",
+        "Session ended by host. You were redirected to the home page."
+      );
+      sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
+      sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
+      router.replace("/home");
+      return;
+    }
+
+    if (state.status === "ENDED") {
+      sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
+      sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
+      router.replace(`/session/${routeSessionCode}/results`);
+      return;
+    }
+
+    if (state.status !== "PLAYING") return;
+
+    if (typeof state.timePerRound === "number" && state.timePerRound > 0) {
+      setTimePerRound(state.timePerRound);
+      sessionStorage.setItem(`timePerRound:${routeSessionCode}`, String(state.timePerRound));
+    }
+
+    if (typeof state.joinedUsers === "number" && state.joinedUsers > 0) {
+      setJoinedUsersCount(state.joinedUsers);
+      sessionStorage.setItem(`joinedUsers:${routeSessionCode}`, String(state.joinedUsers));
+    }
+
+    if (typeof state.votesReceived === "number" && state.votesReceived >= 0) {
+      setVotesReceived(state.votesReceived);
+    }
+
+    if (typeof state.totalRounds === "number" && state.totalRounds > 0) {
+      setTotalRounds(state.totalRounds);
+    }
+
+    if (typeof state.currentMovieIndex === "number" && state.currentMovieIndex > 0) {
+      setCurrentRound(state.currentMovieIndex);
+    }
+
+    setRoundStartedAt(state.roundStartedAt);
+    setTimeRemaining(calculateRemainingSeconds(state.roundStartedAt, state.timePerRound));
+    setHasRoundTimerStarted(Boolean(state.roundStartedAt));
+
+    if (state.currentMovie) {
+      const nextMovieId = getMovieId(state.currentMovie);
+      const existingMovieId = currentMovieIdRef.current;
+      if (nextMovieId && nextMovieId !== existingMovieId) {
+        lastRoundIncrementMovieIdRef.current = nextMovieId;
+        currentMovieIdRef.current = nextMovieId;
+        setMovie(state.currentMovie);
+        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(state.currentMovie));
+      }
+    }
+  };
+
+  const fetchSessionState = async () => {
+    if (stateFetchInFlightRef.current) return;
+    stateFetchInFlightRef.current = true;
+    try {
+      const state = await apiService.get<SessionStateGetDTO>(`/session/${routeSessionCode}/state`);
+      applySessionState(state);
+    } finally {
+      stateFetchInFlightRef.current = false;
+    }
   };
 
   useEffect(() => {
@@ -152,11 +252,12 @@ const VotePage: React.FC = () => {
         sessionStorage.getItem(`currentMovie:${routeSessionCode}`),
       );
       if (cachedMovie) {
+        currentMovieIdRef.current = getMovieId(cachedMovie);
         setMovie(cachedMovie);
       }
 
       const client = new Client({
-        webSocketFactory: () => new SockJS(getSocketEndpoint()),
+        webSocketFactory: () => new SockJS(getSocketEndpoint(), undefined, { transports: ["websocket"] }),
         //built-in from stopjs, waits 0.5 seconds before trying to reconnect after connection loss (in ms)
         // --> may help with websocket instability 
         reconnectDelay: 500,
@@ -168,6 +269,18 @@ const VotePage: React.FC = () => {
 
             //subcribe to vote progress updates(votes received/joined users)
             //get all votes and users and validate them before updating
+            client.subscribe(
+              `/topic/session/${routeSessionCode}/state`,
+              (frame: { body: string }) => {
+                try {
+                  const state = JSON.parse(frame.body) as SessionStateGetDTO;
+                  applySessionState(state);
+                } catch {
+                  void fetchSessionState();
+                }
+              },
+            );
+
             client.subscribe(
               `/topic/session/${routeSessionCode}/lobby`,
               (frame: { body: string }) => {
@@ -212,6 +325,7 @@ const VotePage: React.FC = () => {
                   const currentMovie = JSON.parse(frame.body) as MovieGetDTO;
                   setMovie(currentMovie);
                   sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(currentMovie));
+                  void fetchSessionState();
                 } catch (error) {
                   console.error("Failed to parse late-join movie:", error);
                 }
@@ -226,6 +340,7 @@ const VotePage: React.FC = () => {
                 lastNextMessageAtRef.current = Date.now();
 
                 const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
+                currentMovieIdRef.current = getMovieId(nextMovie);
                 setMovie(nextMovie);
                 setVotesReceived(0);
                 setHasRoundTimerStarted(false);
@@ -235,6 +350,7 @@ const VotePage: React.FC = () => {
                   setCurrentRound((prev) => prev + 1);
                 }
                 sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+                void fetchSessionState();
               } catch (error) {
                 console.error("Failed to parse next movie in vote page:", error);
               }
@@ -355,7 +471,7 @@ const VotePage: React.FC = () => {
     const currentMovieId = getMovieId(movie);
     if (currentMovieId !== lastMovieIdRef.current) {
       lastMovieIdRef.current = currentMovieId;
-      setTimeRemaining(timePerRound);
+      setTimeRemaining(calculateRemainingSeconds(roundStartedAt, timePerRound));
       setHasRoundTimerStarted(true);
     }
 
@@ -367,13 +483,20 @@ const VotePage: React.FC = () => {
       isAdvancingRef.current = true;
 
       try {
-        const nextMovie = await apiService.get<MovieGetDTO>(`/session/${routeSessionCode}/next`);
+        const token = parseStorageValue<string>(localStorage.getItem("token"));
+        if (!token) {
+          throw new Error("Missing host token");
+        }
 
+        const nextMovie = await apiService.postWithAuth<MovieGetDTO>(`/session/${routeSessionCode}/advance`, {}, token);
+
+        currentMovieIdRef.current = getMovieId(nextMovie);
         setMovie(nextMovie);
         setVotesReceived(0);
         setHasRoundTimerStarted(false);
 
         sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
+        void fetchSessionState();
       } catch (error) {
         const apiError = error as { status?: number };
         if (apiError?.status === 409) {
@@ -396,12 +519,13 @@ const VotePage: React.FC = () => {
           }
           return 0;
         }
-        return prev - 1;
+        const serverRemaining = calculateRemainingSeconds(roundStartedAt, timePerRound);
+        return roundStartedAt ? serverRemaining : prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [movie, isLoading, timePerRound, isHost, apiService, routeSessionCode, router, messageApi]);
+  }, [movie, isLoading, timePerRound, roundStartedAt, isHost, apiService, routeSessionCode, router, messageApi]);
 
   const handleVoteClick = async (vote: "x" | "skip" | "heart") => {
     //first check if movie data is loaded and if a vote submission is already in progress
@@ -496,85 +620,31 @@ const VotePage: React.FC = () => {
 
   
 
-  // Normal flow: WebSocket /topic/session/{sessionCode}/next delivers the next movie
+  // Poll /state as the source of truth; websocket messages only wake this up faster.
   useEffect(() => {
-    if (!routeSessionCode || isHost || !isWaitingForNextMovie) {
+    if (!routeSessionCode || !isAuthorized) {
       return;
     }
 
-    waitingStartedAtRef.current = Date.now();
     let cancelled = false;
-    let pollTimeoutId: number | null = null;
 
-    const startEmergencyPolling = (attemptCount = 0) => {
+    const syncState = async () => {
       if (cancelled) return;
-
-      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max) suggested by Claude in case of websocket issues, should be enough to cover most instability without overwhelming the server with requests
-      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
-
-      pollTimeoutId = window.setTimeout(async () => {
-        if (cancelled) return;
-
-        try {
-          const currentMovie = await apiService.get<MovieGetDTO>(
-            `/session/${routeSessionCode}/current`
-          );
-
-          if (cancelled || !currentMovie) return;
-
-          const currentMovieId = getMovieId(currentMovie);
-          const existingMovieId = getMovieId(movie);
-          if (currentMovieId === existingMovieId) {
-            // No change; schedule next retry
-            startEmergencyPolling(attemptCount + 1);
-            return;
-          }
-
-          setMovie(currentMovie);
-          setVotesReceived(0);
-          sessionStorage.setItem(`currentMovie:${routeSessionCode}`,JSON.stringify(currentMovie));
-        } catch (error) {
-          const apiError = error as { status?: number };
-
-          if (apiError?.status === 409) {
-            // Session ended
-            sessionStorage.removeItem(`currentMovie:${routeSessionCode}`);
-            sessionStorage.removeItem(`votedMovieIds:${routeSessionCode}`);
-            router.replace(`/session/${routeSessionCode}/results`);
-            return;
-          }
-
-          if (apiError?.status === 404) {
-            console.error("Emergency polling error", error);
-          }
-
-          // Continue polling with increased backoff
-          startEmergencyPolling(attemptCount + 1);
-        }
-      }, delay);
+      try {
+        await fetchSessionState();
+      } catch (error) {
+        console.error("Session state polling error", error);
+      }
     };
 
-    // Only start polling if we're still waiting after 10s (WebSocket should have delivered by then)
-    const emergencyCheckId = window.setTimeout(() => {
-      if (cancelled) return;
-
-      // Poll only when websocket is unhealthy/disconnected.
-      if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
-        startEmergencyPolling(0);
-        return;
-      }
-      const waitingSince = waitingStartedAtRef.current ?? 0;
-      const lastNextAt = lastNextMessageAtRef.current ?? 0;
-      if (lastNextAt < waitingSince) startEmergencyPolling(0);
-    }, 2000);
+    void syncState();
+    const intervalId = window.setInterval(syncState, 2000);
 
     return () => {
       cancelled = true;
-      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
-      window.clearTimeout(emergencyCheckId);
-      waitingStartedAtRef.current = null;
+      window.clearInterval(intervalId);
     };
-  }, [routeSessionCode, isHost, isWaitingForNextMovie, apiService, router, movie]);
+  }, [routeSessionCode, isAuthorized, apiService, router]);
 
   if (isLoading) {
     return (
