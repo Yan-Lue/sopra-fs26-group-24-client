@@ -334,26 +334,9 @@ const VotePage: React.FC = () => {
 
           client.subscribe(
             `/topic/session/${routeSessionCode}/next`,
-            (frame: { body: string }) => {
-              try {
-                // Mark that /next message was received and record the time
-                lastNextMessageAtRef.current = Date.now();
-
-                const nextMovie = JSON.parse(frame.body) as MovieGetDTO;
-                currentMovieIdRef.current = getMovieId(nextMovie);
-                setMovie(nextMovie);
-                setVotesReceived(0);
-                setHasRoundTimerStarted(false);
-                const currentMovieId = typeof nextMovie.movieId === "number" ? nextMovie.movieId : null;
-                if (currentMovieId && currentMovieId !== lastRoundIncrementMovieIdRef.current) {
-                  lastRoundIncrementMovieIdRef.current = currentMovieId;
-                  setCurrentRound((prev) => prev + 1);
-                }
-                sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
-                void fetchSessionState();
-              } catch (error) {
-                console.error("Failed to parse next movie in vote page:", error);
-              }
+            () => {
+              lastNextMessageAtRef.current = Date.now();
+              void fetchSessionState();
             },
           );
           
@@ -488,15 +471,8 @@ const VotePage: React.FC = () => {
           throw new Error("Missing host token");
         }
 
-        const nextMovie = await apiService.postWithAuth<MovieGetDTO>(`/session/${routeSessionCode}/advance`, {}, token);
-
-        currentMovieIdRef.current = getMovieId(nextMovie);
-        setMovie(nextMovie);
-        setVotesReceived(0);
-        setHasRoundTimerStarted(false);
-
-        sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(nextMovie));
-        void fetchSessionState();
+        await apiService.postWithAuth<MovieGetDTO>(`/session/${routeSessionCode}/advance`, {}, token);
+        await fetchSessionState();
       } catch (error) {
         const apiError = error as { status?: number };
         if (apiError?.status === 409) {
