@@ -59,6 +59,19 @@ interface MovieGetDTO {
   streamingProviders?: string[];
 }
 
+interface SessionStateGetDTO {
+  sessionCode: string;
+  status: "WAITING" | "PLAYING" | "ENDED" | "CANCELED";
+  currentMovieIndex: number;
+  currentMovie: MovieGetDTO | null;
+  roundStartedAt: string | null;
+  timePerRound: number;
+  joinedUsers: number;
+  votesReceived: number;
+  totalRounds: number;
+  usernames?: string[];
+}
+
 // only in the frontend
 const timePerRoundOptions = [
   { value: 15, label: "15s" },
@@ -141,15 +154,52 @@ const SessionWaitingRoom: React.FC = () => {
   );
 
   // helper function to handle correct redirect
-  const redirectToVoteWithMovie = (movie: MovieGetDTO) => {
+  const redirectToVoteWithMovie = (movie: MovieGetDTO, stateJoinedUsers?: number) => {
     if (!sessionCode || hasRedirectedRef.current) return;
 
     getJoinedUsers();
     hasRedirectedRef.current = true;
     sessionStorage.setItem(`currentMovie:${sessionCode}`, JSON.stringify(movie));
-    sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(joinedUsers > 0 ? joinedUsers : 1));
+    sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(stateJoinedUsers ?? (joinedUsers > 0 ? joinedUsers : 1)));
 
     router.replace(`/session/${sessionCode}/vote`);
+  };
+
+  const applySessionState = (state: SessionStateGetDTO) => {
+    if (!sessionCode || state.sessionCode !== sessionCode) return;
+
+    if (typeof state.joinedUsers === "number" && state.joinedUsers > 0) {
+      setJoinedUsers(state.joinedUsers);
+      sessionStorage.setItem(`joinedUsers:${sessionCode}`, String(state.joinedUsers));
+    }
+
+    if (state.usernames) {
+      setJoinedUsernames(state.usernames);
+      sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(state.usernames));
+    }
+
+    if (state.timePerRound) {
+      sessionStorage.setItem(`timePerRound:${sessionCode}`, String(state.timePerRound));
+    }
+
+    if (state.status === "PLAYING" && state.currentMovie) {
+      redirectToVoteWithMovie(state.currentMovie, state.joinedUsers);
+      return;
+    }
+
+    if (state.status === "CANCELED" || state.status === "ENDED") {
+      sessionStorage.setItem(
+        "redirectInfo",
+        "Session ended by host. You were redirected to the home page."
+      );
+      leaveLocally();
+    }
+  };
+
+  const fetchSessionState = async () => {
+    if (!sessionCode) return;
+    const state = await apiService.get<SessionStateGetDTO>(`/session/${sessionCode}/state`);
+    applySessionState(state);
   };
 
   useEffect(() => {
@@ -273,7 +323,7 @@ const SessionWaitingRoom: React.FC = () => {
     }
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(getSocketEndpoint()),
+      webSocketFactory: () => new SockJS(getSocketEndpoint(), undefined, {transports: ['websocket']}),
       reconnectDelay: 5000,
       onConnect: () => {
         // Mark WebSocket as connected
@@ -282,6 +332,18 @@ const SessionWaitingRoom: React.FC = () => {
         wsFallbackArmedRef.current = false;
 
         
+
+        client.subscribe(
+          `/topic/session/${sessionCode}/state`,
+          (frame: { body: string }) => {
+            try {
+              const state = JSON.parse(frame.body) as SessionStateGetDTO;
+              applySessionState(state);
+            } catch {
+              void fetchSessionState();
+            }
+          },
+        );
 
         client.subscribe(
           `/topic/session/${sessionCode}/end`,
@@ -317,6 +379,7 @@ const SessionWaitingRoom: React.FC = () => {
             } catch (error) {
               messageApi.error("Failed to parse next movie update.");
             }
+            void fetchSessionState();
           },
         );
       },
@@ -350,62 +413,30 @@ const SessionWaitingRoom: React.FC = () => {
 
 
 
-  // Normal flow: WebSocket /topic/session/{sessionCode}/next triggers redirectToVoteWithMovie
+  // WebSocket is a fast notification path. Polling /state keeps the lobby recoverable
+  // when the first websocket message is missed during subscription setup.
   useEffect(() => {
-    if (!isValid || !sessionCode || isHost) {
+    if (!isValid || !sessionCode) {
       return;
     }
 
     let isCancelled = false;
-    let pollTimeoutId: number | null = null;
 
-    const startEmergencyPolling = (attemptCount = 0) => {
+    const syncState = async () => {
       if (isCancelled || hasRedirectedRef.current) return;
-
-      // Exponential backoff: 5s → 7.5s → 11.25s → 16.87s → 25s → 30s (max)
-      const delay = Math.min(5000 * Math.pow(1.5, attemptCount), 30000);
-
-      pollTimeoutId = window.setTimeout(async () => {
-        if (isCancelled || hasRedirectedRef.current) return;
-
-        try {
-          const current = await apiService.get<MovieGetDTO>(
-            `/session/${sessionCode}/current`
-          );
-
-          if (isCancelled || hasRedirectedRef.current) return;
-          redirectToVoteWithMovie(current);
-        } catch (error) {
-          const apiError = error as { status?: number };
-          if (apiError?.status === 409 || apiError?.status === 404) {
-            return;
-          }
-          // If still failing, schedule next retry with increased backoff
-          startEmergencyPolling(attemptCount + 1);
-        }
-      }, delay);
+      try {
+        await fetchSessionState();
+      } catch {
+        // Keep retrying; the session may still be waiting for filters/start.
+      }
     };
 
-    // Only start polling as true emergency if WebSocket failed to deliver
-    const checkAndStartEmergencyPolling = () => {
-      const initialDelayBeforeEmergency = window.setTimeout(() => {
-        if (isCancelled || hasRedirectedRef.current) return;
-
-        // Start polling only if websocket is unhealthy/disconnected.
-        if (wsFallbackArmedRef.current || !wsConnectedRef.current) {
-          startEmergencyPolling(0);
-        }
-      }, 10000);
-
-      return () => window.clearTimeout(initialDelayBeforeEmergency);
-    };
-
-    const cleanup = checkAndStartEmergencyPolling();
+    void syncState();
+    const intervalId = window.setInterval(syncState, 2000);
 
     return () => {
       isCancelled = true;
-      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
-      cleanup();
+      window.clearInterval(intervalId);
     };
   }, [apiService, isHost, isValid, sessionCode]);
 
@@ -584,8 +615,13 @@ const SessionWaitingRoom: React.FC = () => {
       // add short delay to ensure correct redirect 
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      //host triggers the first movie broadcast, participants should receive it via /topic/session/{sessionCode}/next.
-      const firstMovie = await apiService.get<MovieGetDTO>(`/session/${sessionCode}/next`);
+      const token = parseStorageValue<string>(localStorage.getItem("token"));
+      if (!token) {
+        throw new Error("Missing host token");
+      }
+
+      // Host triggers the first state transition. Clients render by refetching /state.
+      const firstMovie = await apiService.postWithAuth<MovieGetDTO>(`/session/${sessionCode}/advance`, {}, token);
       redirectToVoteWithMovie(firstMovie);
       messageApi.success("Session started! Redirecting...");
     } catch (error) {
@@ -766,7 +802,7 @@ const SessionWaitingRoom: React.FC = () => {
             
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
-                  Click to see who has joined
+                  See joined Users
                 </Typography.Text>
                 <Button
                   shape="circle"
@@ -808,7 +844,7 @@ const SessionWaitingRoom: React.FC = () => {
         {showJoinedUsers && (
           <Card
             className="play-card session-side-card"
-            title={`${joinedUsernames.length} Users Joined `}
+            title={`${joinedUsernames.length > 1 ? `${joinedUsernames.length} Users` : "1 User"} Joined `}
             extra={
               <Button
                 shape="square"

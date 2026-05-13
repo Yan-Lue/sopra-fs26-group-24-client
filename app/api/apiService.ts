@@ -112,6 +112,22 @@ export class ApiService {
     );
   }
 
+  public async postWithAuth<T>(endpoint: string, data: unknown, token: string): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers = new Headers(this.defaultHeaders);
+    headers.set("Authorization", token);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+    });
+    return this.processResponse<T>(
+      res,
+      "An error occurred while posting the data.\n",
+    );
+  }
+
   /**
    * PUT request.
    * @param endpoint - The API endpoint (e.g. "/users/123").
