@@ -487,6 +487,20 @@ const SessionWaitingRoom: React.FC = () => {
     });
   }
 
+  const handleConfirmLeaveAsParticipant = () => {
+    modal.confirm({
+      className: "leave-session-confirm-modal",
+      title: "Leave session?",
+      content: "Are you sure you want to leave the session?",
+      okText: "Yes, leave",
+      okType: "primary",
+      cancelText: "No, stay",
+      onOk: async () => {
+        await handleLeave();
+      },
+    });
+  };
+
   //needed, because if host ends session, the client is not correctly redirected to home and triggers infinite loop.
   const leaveLocally = () => {
     if (sessionCode) {
@@ -698,6 +712,9 @@ const SessionWaitingRoom: React.FC = () => {
           className="ui-slider small"
           marks={{
             0: 'Any',
+            2.5: " ",
+            5: " ",
+            7.5: " ",
             10: '10',
           }}
           tooltip={{ 
@@ -802,7 +819,7 @@ const SessionWaitingRoom: React.FC = () => {
             
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Typography.Text className="host-meta-line" style={{ margin: 0 }}>
-                  See joined Users
+                  See joined Users ({joinedUsers})
                 </Typography.Text>
                 <Button
                   shape="circle"
@@ -833,7 +850,7 @@ const SessionWaitingRoom: React.FC = () => {
                   </Button>
                 </>
               ) : (
-                <Button className="leave-session-btn" onClick={() => handleLeave()} loading={isLoading}>
+                <Button className="leave-session-btn" onClick={handleConfirmLeaveAsParticipant} loading={isLoading}>
                   Leave Session
                 </Button>
               )}

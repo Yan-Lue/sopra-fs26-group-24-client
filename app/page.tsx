@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button, Typography, theme } from "antd";
-import {
-  GlobalOutlined, 
-  PlayCircleOutlined 
-} from "@ant-design/icons";
 import styles from "@/styles/page.module.css";
+import { BulbOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { Button, Typography, theme } from "antd";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import CurtainIntro from "./components/CurtainIntro";
 
 const { Title } = Typography;
@@ -53,7 +50,7 @@ export default function Home() {
           <Button
             type="primary"
             size="large"
-            icon={<PlayCircleOutlined />}
+            icon={<BulbOutlined />}
             onClick={() => router.push("/tech")}
           >
             Learn More
