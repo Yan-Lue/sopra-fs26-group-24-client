@@ -72,6 +72,16 @@ const Play: React.FC = () => {
 
   }, [router]);
 
+  useEffect(() => {
+    if (!isAuthorized) return;
+
+    const joinError = sessionStorage.getItem("joinError");
+    if (joinError) {
+      messageApi.error(joinError);
+      sessionStorage.removeItem("joinError");
+    }
+  }, [isAuthorized]);
+
   const handleCreateSession = async (values: CreateSessionFormValues) => {
     if (loading) return;
 
@@ -144,6 +154,13 @@ const Play: React.FC = () => {
   if (!trimmedCode) {
     joinForm.setFields([
         { name: "sessionCode", errors: ["Please enter a session code."] },
+      ]);
+    return;
+  }
+
+  if (trimmedCode.length !== 5) {
+    joinForm.setFields([
+        { name: "sessionCode", errors: ["Wrong session code."] },
       ]);
     return;
   }

@@ -320,8 +320,21 @@ const SessionWaitingRoom: React.FC = () => {
 
         setIsValid(true);
       } catch (error) {
-        console.error("Failed to verify session access:", error);
-        alert("Failed to join session. It may already be full or you may already be connected.");
+        const apiError = error as { status?: number; message?: string };
+        let userMessage: string;
+
+        switch (apiError.status) {
+          case 404:
+            userMessage = "Session not found. Please check the code and try again.";
+            break;
+          case 409:
+            userMessage = "This session is already full.";
+            break;
+          default:
+            userMessage = "Failed to join session. Please try again.";
+        }
+
+        sessionStorage.setItem("joinError", userMessage);
         router.replace("/play");
       } finally {
         setIsLoading(false);
