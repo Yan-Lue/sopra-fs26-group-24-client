@@ -1018,6 +1018,37 @@ align-items: center;
 gap: 14px;
 width: 100%;
 }
+/* transition effects for movie change */
+.vote-screen.vote-transition-out {
+  animation: voteSlideOut 0.5s ease-in forwards;
+}
+
+.vote-screen.vote-transition-in {
+  animation: voteSlideIn 0.6s ease-out forwards;
+}
+
+@keyframes voteSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes voteSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+/* -*/
 
 .vote-poster-wrap {
 width: 100%;

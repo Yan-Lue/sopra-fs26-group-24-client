@@ -65,6 +65,8 @@ const VotePage: React.FC = () => {
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
   const [roundStartedAt, setRoundStartedAt] = useState<string | null>(null);
   const [requestedNextMovieIds, setRequestedNextMovieIds] = useState<number[]>([]);
+  const [movieTransition, setMovieTransition] = useState<"idle" | "fade-out" | "fade-in">("idle");
+  const pendingMovieRef = useRef<MovieGetDTO | null>(null);
 
   const [modal, contextHolderModal] = Modal.useModal();
 
@@ -166,8 +168,17 @@ const VotePage: React.FC = () => {
       if (nextMovieId && nextMovieId !== existingMovieId) {
         lastRoundIncrementMovieIdRef.current = nextMovieId;
         currentMovieIdRef.current = nextMovieId;
-        setMovie(state.currentMovie);
         sessionStorage.setItem(`currentMovie:${routeSessionCode}`, JSON.stringify(state.currentMovie));
+
+        // fade out/in for new movie
+        if (movie) {
+          pendingMovieRef.current = state.currentMovie;
+          setMovieTransition("fade-out");
+        } else {
+          // no transition on first movie 
+          setMovie(state.currentMovie);
+          setMovieTransition("fade-in");
+        }
       }
     }
   };
@@ -635,6 +646,26 @@ const VotePage: React.FC = () => {
 
   const showVoteProgress = votesReceived > 0;
 
+  // movie transition effects
+  useEffect(() => {
+    if (movieTransition === "fade-out") {
+      const timer = setTimeout(() => {
+        if (pendingMovieRef.current) {
+          setMovie(pendingMovieRef.current);
+          pendingMovieRef.current = null;
+        }
+        setMovieTransition("fade-in");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    if (movieTransition === "fade-in") {
+      const timer = setTimeout(() => {
+        setMovieTransition("idle");
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [movieTransition]);
+
   
 
   // Poll /state as the source of truth; websocket messages only wake this up faster.
@@ -777,7 +808,7 @@ const VotePage: React.FC = () => {
               <Spin size="large" />
             </div>
           ) : (
-            <div className="vote-screen">
+            <div className={`vote-screen ${movieTransition === "fade-out" ? "vote-transition-out" : movieTransition === "fade-in" ? "vote-transition-in" : ""}`}>
               {hasRoundLimit && (
                 <div className="vote-round-indicator">
                   <Typography.Text className="vote-round-text">
