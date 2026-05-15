@@ -5,26 +5,10 @@ import { getApiDomain } from "@/utils/domain";
 import { parseStorageValue } from "@/utils/storage";
 import { CloseOutlined, HeartFilled, MinusOutlined } from "@ant-design/icons";
 import { Client } from "@stomp/stompjs";
-import { Button, Card, Divider, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Divider, Modal, Space, Spin, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
-
-//useRef allows us to keep track of whether we're currently advancing to the next movie, preventing multiple simultaneous advances if the timer triggers while an advance is already in progress.
-
-/** 
-interface SessionPutDTO {
-  id: number;
-  token: string;
-}
-
-interface SessionResponse {
-  sessionId: number;
-  sessionCode: string;
-  sessionToken: string;
-  hostId: number;
-}
-*/
 
 interface MovieGetDTO {
   movieId: number;
@@ -80,6 +64,9 @@ const VotePage: React.FC = () => {
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number | null>(null);
   const [roundStartedAt, setRoundStartedAt] = useState<string | null>(null);
+  const [requestedNextMovieIds, setRequestedNextMovieIds] = useState<number[]>([]);
+
+  const [modal, contextHolderModal] = Modal.useModal();
 
   const isAdvancingRef = useRef(false);
   const isSubmittingVoteRef = useRef(false);
@@ -566,9 +553,63 @@ const VotePage: React.FC = () => {
     }
   };
 
+  const handleRequestNext = async () => {
+    modal.confirm({
+      className: "leave-session-confirm-modal",
+      title: "Skip to next round?",
+      content: "Are you sure you want to skip the current round? The next movie will be shown to all participants.",
+      okText: "Yes, skip",
+      okType: "primary",
+      cancelText: "No, stay",
+      onOk: async () => {
+        try {
+          const token = parseStorageValue<string>(localStorage.getItem("token"));
+          if (!token) throw new Error("Missing host token");
+
+          await apiService.postWithAuth<MovieGetDTO>(`/session/${routeSessionCode}/next/request`, {}, token);
+
+          const movieId = getMovieId(movie);
+          if (movieId) {
+            setRequestedNextMovieIds((prev) =>
+              prev.includes(movieId) ? prev : [...prev, movieId]
+            );
+          }
+
+          await fetchSessionState();
+          messageApi.success("Requested next movie.");
+        } catch (err) {
+          const apiError = err as { status?: number; info?: string };
+          
+          if (apiError?.status === 409) {
+            router.replace(`/session/${routeSessionCode}/results`);
+            messageApi.info("Session ended. Redirecting to results...");
+            return;
+          }
+          
+          if (apiError?.status === 403) {
+            try {
+              const errorInfo = JSON.parse(apiError.info || "{}");
+              const detail = errorInfo.detail || "Please wait for all players to vote before requesting the next movie.";
+              messageApi.warning(detail);
+            } catch {
+              messageApi.warning("Please wait for all players to vote before requesting the next movie.");
+            }
+            return;
+          }
+          
+          console.error("Failed to request next movie:", err);
+          messageApi.error("Failed to request next movie. Please try again.");
+        }
+      },
+    });
+  };
+
   //should prevent multiples votes for same movie 
   const currentMovieId = getMovieId(movie);
   const hasVotedCurrentMovie = currentMovieId ? votedMovieIds.includes(currentMovieId) : false;
+  const hasRequestedNextCurrentMovie = currentMovieId
+    ? requestedNextMovieIds.includes(currentMovieId)
+    : false;
   const hasTimedOutCurrentMovie = hasRoundTimerStarted && timeRemaining <= 0;
   const isWaitingForNextMovie = hasRoundTimerStarted && (hasVotedCurrentMovie || hasTimedOutCurrentMovie) && !isSubmittingVote;
   const displayedSeconds = Math.max(0, Math.ceil(timeRemaining));
@@ -641,6 +682,7 @@ const VotePage: React.FC = () => {
   return (
     <div className="page-with-nav">
       {contextHolder}
+      {contextHolderModal}
 
       {typeof timePerRound === "number" && timePerRound > 0 && (
         <div className="vote-floating-timer" aria-live="polite">
@@ -710,6 +752,19 @@ const VotePage: React.FC = () => {
                 {`${votesReceived}/${joinedUsersCount}`}
               </Typography.Text>
             </div>
+
+            {isHost && (
+              <div className="vote-host-controls">
+                <Button
+                  type="default"
+                  onClick={() => void handleRequestNext()}
+                  disabled={!movie || isSubmittingVote || hasRequestedNextCurrentMovie}
+                  className="vote-skip-round-btn"
+                >
+                  Skip Round
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

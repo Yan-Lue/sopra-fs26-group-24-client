@@ -3,7 +3,7 @@
 import { useApi } from "@/hooks/useApi";
 import { clearSessionClientState, parseStorageValue } from "@/utils/storage";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Collapse, Form, Input, Modal, Select, Space, Spin, Tag, Typography, message } from "antd";
+import { Button, Card, Collapse, Form, Input, Modal, Slider, Spin, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -45,11 +45,6 @@ likes?: number;
 dislikes?: number;
 neutrals?: number;
 }
-
-const playerOptions = Array.from({ length: 16 }, (_, index) => ({
-  value: index + 1,
-  label: `${index + 1}`,
-}));
 
 const ResultsPage: React.FC = () => {
 const apiService = useApi();
@@ -185,6 +180,7 @@ const handleConfirmNewRound = async () => {
 
     localStorage.setItem("sessionCode", session.sessionCode);
     localStorage.setItem("hostId", session.hostId.toString());
+    sessionStorage.setItem(`sessionName:${session.sessionCode}`, values.sessionName.trim());
 
     setIsModalVisible(false);
     router.push(`/session/${session.sessionCode}`);
@@ -446,7 +442,7 @@ return (
         className="start-new-round-modal"
         title="Start New Round"
         >
-        <Form form={createForm} layout="vertical" onFinish={handleConfirmNewRound}>
+        <Form form={createForm} layout="vertical" onFinish={handleConfirmNewRound} initialValues={{ maxPlayers: 1 }}>
             <Form.Item
             name="sessionName"
             label="Session Name"
@@ -456,11 +452,23 @@ return (
             </Form.Item>
 
             <Form.Item
-            name="maxPlayers"
-            label="Number of Players"
-            rules={[{ required: true, message: "Please input the number of players!" }]}
+              name="maxPlayers"
+              label="Number of Players"
+              rules={[{ required: true, message: "Please input the number of players!" }]}
+              valuePropName="value"
+              getValueFromEvent={(value) => value}
             >
-            <Select placeholder="Select the number of players..." options={playerOptions} />
+            <Slider
+              min={1}
+              max={9}
+              step={1}
+              marks={{
+                1: "1",
+                9: "9",
+              }}
+              className="ui-slider"
+              tooltip={{ formatter: (value) => `${value}` }}
+            />
             </Form.Item>
 
             <Form.Item style={{ textAlign: "center"}}>

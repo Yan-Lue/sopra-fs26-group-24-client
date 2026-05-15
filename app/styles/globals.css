@@ -110,6 +110,36 @@ a {
   gap: 64px;
 }
 
+.vote-floating-right-stack .vote-host-controls {
+  pointer-events: auto;
+  margin-top: 10px;
+}
+
+.vote-skip-round-btn.ant-btn {
+  background: var(--primary-gold) !important;
+  border-color: var(--primary-gold) !important;
+  color: var(--background) !important;
+  font-weight: 700;
+  border-radius: 10px !important;
+  height: 38px;
+  min-width: 132px;
+  box-shadow: none !important;
+}
+
+.vote-skip-round-btn.ant-btn:hover,
+.vote-skip-round-btn.ant-btn:focus {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--background) !important;
+}
+
+.vote-skip-round-btn.ant-btn[disabled],
+.vote-skip-round-btn.ant-btn:disabled {
+  background: rgba(212, 175, 55, 0.28) !important;
+  border-color: rgba(212, 175, 55, 0.28) !important;
+  color: rgba(26, 10, 15, 0.75) !important;
+}
+
 .vote-countdown-circle {
   width: 92px;
   height: 92px;
@@ -308,6 +338,14 @@ a {
 }
 .play-description {
   white-space: pre-wrap;
+}
+
+.session-code-input {
+  text-transform: uppercase;
+}
+
+.session-code-input::placeholder {
+  text-transform: none;
 }
 
 /* Slider Styles */
