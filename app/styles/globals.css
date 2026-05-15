@@ -340,6 +340,14 @@ a {
   white-space: pre-wrap;
 }
 
+.session-code-input {
+  text-transform: uppercase;
+}
+
+.session-code-input::placeholder {
+  text-transform: none;
+}
+
 /* Slider Styles */
 
 .ui-slider { 

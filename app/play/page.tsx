@@ -225,7 +225,7 @@ const Play: React.FC = () => {
               label="Session Code"
               rules={[{ required: true, message: "Please input the session code!" }]}
             >
-              <Input placeholder="Enter Session Code" maxLength={5}/>
+              <Input placeholder="Enter Session Code" maxLength={5} className="session-code-input"/>
             </Form.Item>
 
             <Form.Item>

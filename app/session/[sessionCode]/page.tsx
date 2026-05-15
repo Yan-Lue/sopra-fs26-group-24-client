@@ -528,7 +528,7 @@ const SessionWaitingRoom: React.FC = () => {
 
   const handleCopySessionLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(sessionCode?.toUpperCase() ?? "");
       messageApi.success("Session link copied.");
     } catch (error) {
       console.error("Failed to copy session link:", error);
