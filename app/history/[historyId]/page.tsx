@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { useApi } from "@/hooks/useApi";
 import { parseStorageValue } from "@/utils/storage";
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Space, Tag, Typography, message } from "antd";
+import { Button, Card, Collapse, Space, Tag, Typography, message } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -24,6 +24,14 @@ interface HistoryDetail {
   movies: HistoryMovieEntry[];
 }
 
+interface SimilarMovie {
+  movieId: number;
+  title: string;
+  posterPath?: string;
+  rating?: number;
+  releaseDate?: string;
+}
+
 interface MovieInfo {
   movieId: number;
   title: string;
@@ -33,6 +41,7 @@ interface MovieInfo {
   releaseDate?: string;
   genres?: string[];
   streamingProviders?: string[];
+  similarMovies?: SimilarMovie[];
 }
 
 const HistoryDetailPage: React.FC = () => {
@@ -207,6 +216,61 @@ const HistoryDetailPage: React.FC = () => {
                                 </Text>
                               )}
                             </div>
+
+                            <Collapse
+                              ghost
+                              size="small"
+                              className="result-similar-collapse"
+                              items={[
+                                {
+                                  key: "similar-" + entry.movieId,
+                                  label: `Similar movies (${movie?.similarMovies?.length ?? 0})`,
+                                  children:
+                                    movie?.similarMovies && movie.similarMovies.length > 0 ? (
+                                      <div className="similar-movies-list">
+                                        {movie.similarMovies.map((similar) => {
+                                          const similarPoster = similar.posterPath
+                                            ? getPosterUrl(similar.posterPath)
+                                            : "";
+
+                                          return (
+                                            <div key={similar.movieId} className="similar-movie-item">
+                                              {similarPoster ? (
+                                                <img
+                                                  src={similarPoster}
+                                                  alt={similar.title}
+                                                  className="similar-movie-poster"
+                                                />
+                                              ) : (
+                                                <div className="similar-movie-poster-placeholder">No poster</div>
+                                              )}
+
+                                              <div className="similar-movie-info">
+                                                <Text className="similar-movie-title">
+                                                  {similar.title}
+                                                </Text>
+                                                <Text className="similar-movie-meta">
+                                                  {similar.rating
+                                                    ? `Rating: ${similar.rating.toFixed(1)}`
+                                                    : "No rating"}{" "}
+                                                  •{" "}
+                                                  {similar.releaseDate
+                                                    ? similar.releaseDate.slice(0, 4)
+                                                    : "Unknown year"}
+                                                </Text>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <Text type="secondary">
+                                        No similar movies available.
+                                      </Text>
+                                    ),
+                                },
+                              ]}
+                            />
                           </div>
                         </div>
                       </div>
