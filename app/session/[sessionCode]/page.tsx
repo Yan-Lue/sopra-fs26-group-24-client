@@ -23,6 +23,7 @@ interface SessionResponse {
   joinedUsers?: number;
   usernames?: string[];
   sessionName?: string;
+  hostUsername?: string;
 }
 
 interface FilterFormValues {
@@ -46,6 +47,7 @@ interface SessionStatusGetDTO {
   joinedUsers: number;
   maxPlayers: number;
   usernames: string[];
+  hostUsername?: string;
 }
 
 interface MovieGetDTO {
@@ -70,6 +72,7 @@ interface SessionStateGetDTO {
   votesReceived: number;
   totalRounds: number;
   usernames?: string[];
+  hostUsername?: string;
 }
 
 // only in the frontend
@@ -140,6 +143,7 @@ const SessionWaitingRoom: React.FC = () => {
   const [sessionName, setSessionName] = useState<string>("Session");
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
+  const [hostUsername, setHostUsername] = useState<string | null>(null);
 
   const [filterForm] = Form.useForm<FilterFormValues>();
 
@@ -176,6 +180,11 @@ const SessionWaitingRoom: React.FC = () => {
     if (state.usernames) {
       setJoinedUsernames(state.usernames);
       sessionStorage.setItem(`joinedUsernames:${sessionCode}`, JSON.stringify(state.usernames));
+    }
+
+    if (state.hostUsername) {
+      setHostUsername(state.hostUsername);
+      sessionStorage.setItem(`hostUsername:${sessionCode}`, state.hostUsername);
     }
 
     if (state.timePerRound) {
@@ -231,6 +240,11 @@ const SessionWaitingRoom: React.FC = () => {
         const storedUsernames = sessionStorage.getItem(`joinedUsernames:${cachedSessionCode}`);
         if (storedUsernames) {
           setJoinedUsernames(JSON.parse(storedUsernames));
+        }
+
+        const storedHostUsername = sessionStorage.getItem(`hostUsername:${routeSessionCode}`);
+        if (storedHostUsername) {
+          setHostUsername(storedHostUsername);
         }
 
         setSessionName(
@@ -297,6 +311,11 @@ const SessionWaitingRoom: React.FC = () => {
         if (session.usernames) {
           setJoinedUsernames(session.usernames);
           sessionStorage.setItem(`joinedUsernames:${session.sessionCode}`, JSON.stringify(session.usernames));
+        }
+
+        if (session.hostUsername) {
+          setHostUsername(session.hostUsername);
+          sessionStorage.setItem(`hostUsername:${session.sessionCode}`, session.hostUsername);
         }
 
         setIsValid(true);
@@ -560,6 +579,10 @@ const SessionWaitingRoom: React.FC = () => {
 
       const status = await apiService.getWithAuth<SessionStatusGetDTO>(`/session/${sessionCode}/users`, token);
       setJoinedUsernames(status.usernames ?? []);
+      if (status.hostUsername) {
+        setHostUsername(status.hostUsername);
+        sessionStorage.setItem(`hostUsername:${sessionCode}`, status.hostUsername);
+      }
       messageApi.success(`Loaded joined users.`);
     } catch (error) {
       console.error("Failed to load joined users:", error);
@@ -876,11 +899,19 @@ const SessionWaitingRoom: React.FC = () => {
           >
             <div className="participant-settings">
               {joinedUsernames.length > 0 ? (
-                joinedUsernames.map((username, i) => (
-                  <Typography.Text key={i} className="host-meta-line" style={{ display: "block" }}>
-                    {username}
-                  </Typography.Text>
-                ))
+                joinedUsernames.map((username, i) => {
+                  const storedUsername = localStorage.getItem("username");
+                  const currentUsername = storedUsername ?? (isHost ? hostUsername : null);
+                  const isYou = currentUsername != null && username === currentUsername;
+                  const isHostUser = hostUsername != null && username === hostUsername;
+                  return (
+                    <Typography.Text key={i} className="host-meta-line" style={{ display: "block" }}>
+                      {username}
+                      {isHostUser && <span className="user-tag host-tag">(Host)</span>}
+                      {isYou && <span className="user-tag you-tag">(You)</span>}
+                    </Typography.Text>
+                  );
+                })
               ) : (
                 <Typography.Text className="host-meta-line">No users have joined</Typography.Text>
               )}

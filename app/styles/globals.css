@@ -415,6 +415,27 @@ a {
   line-height: 1.45;
 }
 
+.user-tag {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.host-tag {
+  color: var(--primary-gold);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.you-tag {
+  color: rgba(245,230,211,0.70);
+  background: rgba(94, 207, 207, 0.10);
+  border: 1px solid rgba(94, 207, 207, 0.28);
+}
+
 .participant-card .ant-card-body {
   display: flex;
   flex-direction: column;
