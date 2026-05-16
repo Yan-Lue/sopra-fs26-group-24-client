@@ -47,6 +47,9 @@ const Register: React.FC = () => {
       if (response.token && response.id) {
         setToken(response.token);
         setUserId(response.id);
+        if (response.username) {
+          localStorage.setItem("username", response.username);
+        }
       }
 
 
