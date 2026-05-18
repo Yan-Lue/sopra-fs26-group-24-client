@@ -6,7 +6,34 @@ This production was conducted during the Software Practical Course at the Depart
 
 ## High-Level Components
 
-...
+The frontend is structured into four primary layers to ensure clean separation of concerns and maintainability:
+
+1. **Pages & Routes Layer:** Entry points for user interactions and page-level navigation.
+    - _Reference:_ [`app/home/page.tsx`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/home/page.tsx) - Handles the home page routing, authorization checks, and message display.
+    - Coordinates user flows across the application (home, play, login, register, profile, history, session).
+    - Manages page-level state and integrates hooks, API calls, and real-time communications.
+
+2. **UI Components Layer:** Reusable, self-contained React components responsible for rendering UI and user interactions.
+    - _Reference:_ [`app/components/Navbar.tsx`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/components/Navbar.tsx) - Navigation bar component with authentication state management and logout functionality.
+    - Contains styled, interactive components (Navbar, CurtainIntro) used across multiple pages.
+    - Utilizes custom hooks (`useApi`, `useLocalStorage`) for state and API interactions.
+
+3. **Real-time Communication Layer:** WebSocket-based communication for live session updates and collaborative features.
+    - _Reference:_ [`app/session/[sessionCode]/page.tsx`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/session/%5BsessionCode%5D/page.tsx) - Uses `@stomp/stompjs` and `sockjs-client` for WebSocket connections.
+    - Enables real-time lobbies, voting updates, and user synchronization across connected participants.
+    - Manages subscription to backend channels for session status, user joins/leaves, and movie updates.
+
+4. **Theme & Global Configuration Layer:** Application-wide styling and configuration setup.
+    - _Reference:_ [`app/layout.tsx`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/layout.tsx) - Configures Ant Design's `ConfigProvider` with custom theme tokens, component styling, and colors.
+    - Wraps entire app with necessary providers (Ant Design registry, AntdApp component).
+    - Ensures consistent styling, typography, and component behavior across all pages.
+
+### Supporting Layers
+
+The above layers are supported by internal utilities and services and part of architectural flow:
+- **API Service:** [`app/api/apiService.ts`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/api/apiService.ts) - Centralizes HTTP communication with the backend, handling requests, responses, errors, and authentication.
+- **Custom Hooks:** [`app/hooks/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/hooks/) - Provides `useApi()`, `useLocalStorage()`, and other hooks for state management and side effects.
+- **Types & Utilities:** [`app/types/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/types/) and [`app/utils/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/utils/) - Type definitions and helper functions for storage, environment, domain resolution, and UUID generation.
 
 ## Getting Started
 
@@ -101,7 +128,10 @@ In order to get an appropriate overview of the layout and UI of the application,
 
 ## Roadmap
 
-...
+New features that could be added to contribute to our project: 
+- Possibility to watch movie-trailers. Either provided as a link on the results page and/ or by directly embedding in vote-round. 
+- Redirect all player to the new round when the host starts a new round. 
+- Implement a visually catching alert (e.g. flashing, message..) for the last seconds of each voting.  
 
 ## Authors
 
