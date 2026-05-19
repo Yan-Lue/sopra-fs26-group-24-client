@@ -58,7 +58,7 @@ deno -v
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/your-username/sopra-fs26-group-24-client.git
+git clone https://github.com/Yan-Lue/sopra-fs26-group-24-client.git
 cd sopra-fs26-group-24-client
 ```
 
@@ -107,7 +107,7 @@ The frontend is hosted on **Vercel**. Deployment is handled automatically via **
 ## Versioning
 
 We use milestone-based versioning (M1, M2, M3, ...).
-For the versions available, see the [tags on this repository](https://github.com/your-username/sopra-fs26-group-24-client/tags).
+For the versions available, see the [tags on this repository](https://github.com/Yan-Lue/sopra-fs26-group-24-client/tags).
 
 ## Illustrations
 
