@@ -27,6 +27,8 @@ The frontend is structured into four primary layers to ensure clean separation o
     - _Reference:_ [`app/layout.tsx`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/layout.tsx) - Configures Ant Design's `ConfigProvider` with custom theme tokens, component styling, and colors.
     - Wraps entire app with necessary providers (Ant Design registry, AntdApp component).
     - Ensures consistent styling, typography, and component behavior across all pages.
+  
+These layers interact as follows: the Pages & Routes Layer orchestrates user flows by rendering UI Components and connecting to the Real-time Communication Layer for live session updates via WebSocket. Both pages and components rely on the API Service (in the supporting layers) for HTTP communication with the backend. The Theme & Global Configuration Layer wraps the entire application, providing consistent styling and providers to all pages and components.
 
 ### Supporting Layers
 
