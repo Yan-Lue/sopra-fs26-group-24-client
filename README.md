@@ -133,7 +133,8 @@ In order to get an appropriate overview of the layout and UI of the application,
 New features that could be added to contribute to our project: 
 - Possibility to watch movie-trailers. Either provided as a link on the results page and/ or by directly embedding in vote-round. 
 - Redirect all player to the new round when the host starts a new round. 
-- Implement a visually catching alert (e.g. flashing, message..) for the last seconds of each voting.  
+- Implement a visually catching alert (e.g. flashing, message..) for the last seconds of each voting.
+- Search for users and view their profile, add users to friends list, quick invite friends to lobby.  
 
 ## Authors
 
