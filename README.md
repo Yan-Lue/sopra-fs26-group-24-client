@@ -111,7 +111,9 @@ The frontend is hosted on **Vercel**. Deployment is handled automatically via **
 We use milestone-based versioning (M1, M2, M3, ...).
 For the versions available, see the [tags on this repository](https://github.com/Yan-Lue/sopra-fs26-group-24-client/tags).
 
-## Illustrations
+## Illustrations and User Flow
+
+The typical user flow starts with users logging in or continuing as guests to join or create a session. The host (creator of the session) may then configure movie filters (like genre or release year), as well as voting time and the amount of movies to vote on in the Waiting Room and starts the session once everyone has joined. Participants then individually vote (like/dislike) on a synchronized sequence of movies. After voting, the group views a final scoreboard with the most liked movies and similar recommendations. They may then go on to save the round result to their history, where they can view all their past saved rounds.
 
 In order to get an appropriate overview of the layout and UI of the application, have a look at the following samples:
 
