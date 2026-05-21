@@ -1,6 +1,6 @@
 # UWatch - Interactive Movie Finder
 
-This production was conducted during the Software Practical Course at the Department of Informatics at the University of Zurich, during Spring Term 2026. The scope was to build a web-based application that uses at least one external API and features collaborative real-time user experience. The application is called UWatch and is designed to be an interactive movie finder, that can be used by a group of friends in order to find a movie to watch, that suits everybody's taste. The key functionality is to present several movies - based on filters chosen by the host of a session - to the participating users and let them decide whether to like or dislike a respective movie. In the end a final scoreboard for every movie is presented together with additional similar recommendations.
+This production was conducted during the Software Practical Course at the Department of Informatics at the University of Zurich, during Spring Term 2026. The scope was to build a web-based application that uses at least one external API and features a collaborative, real-time user experience. The application is called UWatch and is designed to be an interactive movie finder that can be used by a group of friends in order to find a movie to watch that suits everybody's taste. The key functionality is to present several movies - based on filters chosen by the host of a session - to the participating users and let them decide whether to like or dislike a respective movie. In the end, a final scoreboard for every movie is presented together with additional similar recommendations.
 
 ---
 
@@ -32,7 +32,7 @@ These layers interact as follows: the Pages & Routes Layer orchestrates user flo
 
 ### Supporting Layers
 
-The above layers are supported by internal utilities and services and part of architectural flow:
+The above layers are supported by internal utilities and services and part of the architectural flow:
 - **API Service:** [`app/api/apiService.ts`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/api/apiService.ts) - Centralizes HTTP communication with the backend, handling requests, responses, errors, and authentication.
 - **Custom Hooks:** [`app/hooks/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/hooks/) - Provides `useApi()`, `useLocalStorage()`, and other hooks for state management and side effects.
 - **Types & Utilities:** [`app/types/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/types/) and [`app/utils/`](https://github.com/Yan-Lue/sopra-fs26-group-24-client/blob/main/app/utils/) - Type definitions and helper functions for storage, environment, domain resolution, and UUID generation.
@@ -43,7 +43,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-Ensure that one of the following are installed before running the project:
+Ensure that one of the following is installed before running the project:
 
 - **Node.js** – [Download here](https://nodejs.org/en/download)
 - **Deno** – [Download here](https://deno.com/)
@@ -132,7 +132,7 @@ In order to get an appropriate overview of the layout and UI of the application,
 
 New features that could be added to contribute to our project: 
 - Possibility to watch movie-trailers. Either provided as a link on the results page and/ or by directly embedding in vote-round. 
-- Redirect all player to the new round when the host starts a new round. 
+- Redirect all players to the new round when the host starts a new round. 
 - Implement a visually catching alert (e.g. flashing, message..) for the last seconds of each voting.
 - Search for users and view their profile, add users to friends list, quick invite friends to lobby.  
 
