@@ -93,6 +93,33 @@ The app will be available at `http://localhost:3000`.
 | `deno task lint` / `npm run lint`   | Checks the codebase for errors and warnings |
 | `deno task fmt` / `npm run fmt`     | Formats the codebase uniformly              |
 
+### Development with Docker Compose
+
+As an alternative to running the frontend and backend manually, the full local development setup can be started with Docker Compose.
+
+This setup starts:
+- local PostgreSQL database
+- backend on `http://localhost:8080`
+- frontend on `http://localhost:3000`
+
+Make sure both server and client repositories are located next to each other:
+
+```text
+Project/
+├── sopra-fs26-group-24-client/
+└── sopra-fs26-group-24-server/
+```
+
+1. Create a docker-compose.yml file inside the client repository. [Docker Documentation](https://docs.docker.com/compose/) or LLMs can help with that.
+2. Start the development environment:
+```bash
+docker compose -f docker-compose.yml up
+```
+3. To stop the containers:
+```bash
+docker compose -f docker-compose.yml down
+```
+
 ## Deployment
 
 The frontend is hosted on **Vercel**. Deployment is handled automatically via **GitHub Actions** — every push to `main` triggers a new deployment, no manual steps required.
@@ -163,7 +190,7 @@ In order to get an appropriate overview of the layout and UI of the application,
 New features that could be added to contribute to our project: 
 - Possibility to watch movie-trailers. Either provided as a link on the results page and/ or by directly embedding in vote-round. 
 - Redirect all players to the new round when the host starts a new round. 
-- Implement a visually catching alert (e.g. flashing, message..) for the last seconds of each voting.
+- Implement a visually catching alert (e.g. flashing, message...) for the last seconds of each voting.
 - Search for users and view their profile, add users to friends list, quick invite friends to lobby.  
 
 ## Authors
