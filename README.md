@@ -116,16 +116,44 @@ For the versions available, see the [tags on this repository](https://github.com
 In order to get an appropriate overview of the layout and UI of the application, have a look at the following samples:
 
 <p align="center">
-  <img src="./images/Home.png" width="600" alt="Home Page"><br>
-  <em>The Home Page with Navbar, Session Window and History Window</em>
+  <img src="./images/Landingpage.jpeg" width="600" alt="Landing Page"><br>
+  <em>The landing page with "Start App" and "Learn More" buttons</em>
 </p>
+
 <p align="center">
-  <img src="./images/Filters.png" width="600" alt="Filters"><br>
-  <em>The Host's Waiting Room, including Filter Options for the Session</em>
+  <img src="./images/Homepage.jpeg" width="600" alt="Home Page"><br>
+  <em>The home page featuring a navbar, a session window, and a history window</em>
 </p>
+
 <p align="center">
-  <img src="./images/Movie.png" width="600" alt="Filters"><br>
-  <em>A movie suggestion during a session</em>
+  <img src="./images/Play.jpeg" width="600" alt="Play Page"><br>
+  <em>The play page with options to start or join a game</em>
+</p>
+
+<p align="center">
+  <img src="./images/Lobby.jpeg" width="600" alt="Lobby"><br>
+  <em>The host's waiting room, including filter options for the session</em>
+</p>
+
+<p align="center">
+  <img src="./images/Vote_Top.jpeg" width="600" alt="Vote Top"><br>
+  <img src="./images/Vote_Bottom.jpeg" width="600" alt="Vote Bottom"><br>
+  <em>A movie suggestion during a session, featuring voting buttons</em>
+</p>
+
+<p align="center">
+  <img src="./images/Results.jpeg" width="600" alt="Results"><br>
+  <em>The results page displaying tallied votes and a "Save to History" button</em>
+</p>
+
+<p align="center">
+  <img src="./images/History_Overview.jpeg" width="600" alt="History Overview"><br>
+  <em>The history page with a filterable overview of past rounds</em>
+</p>
+
+<p align="center">
+  <img src="./images/History_Entry.jpeg" width="600" alt="History Entry"><br>
+  <em>A single history entry detailing round results and movie recommendations</em>
 </p>
 
 ## Roadmap
